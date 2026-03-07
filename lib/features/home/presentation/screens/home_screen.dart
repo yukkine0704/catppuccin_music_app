@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import '../../../audio_player/presentation/screens/now_playing_screen.dart';
 import '../../../library/presentation/screens/library_screen.dart';
 import '../../../settings/presentation/screens/settings_screen.dart';
+import 'home_content_screen.dart';
 
-/// Main home screen with bottom navigation.
+/// Main home screen shell with bottom navigation (4 tabs).
+/// Tab structure: Home, Library, Now Playing, Settings
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -17,6 +19,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
 
   final List<Widget> _screens = [
+    const HomeContentScreen(),
     const LibraryScreen(),
     const NowPlayingScreen(),
     const SettingsScreen(),
@@ -38,6 +41,11 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: flavor.mantle,
         indicatorColor: flavor.mauve.withValues(alpha: 0.3),
         destinations: [
+          NavigationDestination(
+            icon: Icon(Icons.home_outlined, color: flavor.subtext1),
+            selectedIcon: Icon(Icons.home_rounded, color: flavor.mauve),
+            label: 'Home',
+          ),
           NavigationDestination(
             icon: Icon(Icons.library_music_outlined, color: flavor.subtext1),
             selectedIcon: Icon(

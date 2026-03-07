@@ -66,7 +66,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             subtitle: 'Usar tema oscuro de Catppuccin',
             trailing: Switch(
               value: _darkMode,
-              activeColor: flavor.mauve,
+              activeThumbColor: flavor.mauve,
               onChanged: _saveDarkMode,
             ),
             flavor: flavor,

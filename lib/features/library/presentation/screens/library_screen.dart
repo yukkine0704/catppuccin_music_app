@@ -178,14 +178,14 @@ class _TrackListTile extends ConsumerWidget {
                 width: 48,
                 height: 48,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => _buildPlaceholder(),
+                errorBuilder: (_, _, _) => _buildPlaceholder(),
               )
             : Image.asset(
                 track.albumArtPath!,
                 width: 48,
                 height: 48,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => _buildPlaceholder(),
+                errorBuilder: (_, _, _) => _buildPlaceholder(),
               ),
       );
     }
