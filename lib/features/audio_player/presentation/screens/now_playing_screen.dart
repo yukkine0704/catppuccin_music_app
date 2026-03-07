@@ -11,7 +11,9 @@ import '../providers/audio_player_provider.dart';
 
 /// Now Playing screen with vinyl animation - Redesigned version.
 class NowPlayingScreen extends ConsumerStatefulWidget {
-  const NowPlayingScreen({super.key});
+  final bool isInSheet;
+
+  const NowPlayingScreen({super.key, this.isInSheet = false});
 
   @override
   ConsumerState<NowPlayingScreen> createState() => _NowPlayingScreenState();
@@ -31,72 +33,103 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen> {
     return Scaffold(
       backgroundColor: flavor.base,
       body: SafeArea(
-        child: Column(
-          children: [
-            // 1. Custom AppBar
-            _buildCustomAppBar(flavor),
-
-            // 2. Album Art Section
-            Expanded(
-              flex: 4,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Center(
-                  child: _VinylWidget(
-                    isPlaying: playerState.isPlaying,
-                    albumArt: playerState.currentTrack?.albumArtBytes,
-                    flavor: flavor,
-                  ),
-                ),
-              ),
-            ),
-
-            // 3. Music Info Row
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: _buildMusicInfoRow(flavor),
-            ),
-
-            const SizedBox(height: 24),
-
-            // 4. Progress Section
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: _buildProgressSection(playerState, flavor),
-            ),
-
-            const SizedBox(height: 24),
-
-            // 5. Control Panel
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: _buildControlPanel(playerState, flavor),
-            ),
-
-            const SizedBox(height: 32),
-          ],
-        ),
+        child: widget.isInSheet
+            ? _buildDraggableContent(flavor, playerState)
+            : _buildStandardContent(flavor, playerState),
       ),
     );
   }
 
-  /// Custom AppBar: Row with collapse button, "Listening to" text, and menu button.
+  /// Builds content when used in a draggable sheet (swipe to dismiss).
+  Widget _buildDraggableContent(Flavor flavor, PlayerState playerState) {
+    return GestureDetector(
+      onVerticalDragEnd: (details) {
+        // Close sheet when swiped down
+        if (details.primaryVelocity != null && details.primaryVelocity! > 500) {
+          Navigator.of(context).pop();
+        }
+      },
+      child: _buildContent(flavor, playerState),
+    );
+  }
+
+  /// Builds standard content (when used as standalone screen).
+  Widget _buildStandardContent(Flavor flavor, PlayerState playerState) {
+    return _buildContent(flavor, playerState);
+  }
+
+  /// Main content builder.
+  Widget _buildContent(Flavor flavor, PlayerState playerState) {
+    return Column(
+      children: [
+        // 1. Custom AppBar
+        _buildCustomAppBar(flavor),
+
+        // 2. Album Art Section
+        Expanded(
+          flex: 4,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Center(
+              child: _VinylWidget(
+                isPlaying: playerState.isPlaying,
+                albumArt: playerState.currentTrack?.albumArtBytes,
+                flavor: flavor,
+              ),
+            ),
+          ),
+        ),
+
+        // 3. Music Info Row
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: _buildMusicInfoRow(flavor),
+        ),
+
+        const SizedBox(height: 24),
+
+        // 4. Progress Section
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: _buildProgressSection(playerState, flavor),
+        ),
+
+        const SizedBox(height: 24),
+
+        // 5. Control Panel
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: _buildControlPanel(playerState, flavor),
+        ),
+
+        const SizedBox(height: 32),
+      ],
+    );
+  }
+
+  /// Custom AppBar: Row with collapse button (optional), "Listening to" text, and menu button.
   Widget _buildCustomAppBar(Flavor flavor) {
+    // Hide collapse button when in sheet mode (drag handle is in parent)
+    final showCollapseButton = !widget.isInSheet;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           // Collapse button (arrow down)
-          IconButtonM3E(
-            variant: IconButtonM3EVariant.standard,
-            size: IconButtonM3ESize.md,
-            icon: Icon(Icons.keyboard_arrow_down_rounded, color: flavor.text),
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
-            tooltip: 'Collapse',
-          ),
+          if (showCollapseButton)
+            IconButtonM3E(
+              variant: IconButtonM3EVariant.standard,
+              size: IconButtonM3ESize.md,
+              icon: Icon(Icons.keyboard_arrow_down_rounded, color: flavor.text),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              tooltip: 'Collapse',
+            )
+          else
+            const SizedBox(width: 48), // Placeholder for alignment
 
           // "Listening to" text - Headline large and bold
           Text(

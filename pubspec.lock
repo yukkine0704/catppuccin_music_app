@@ -154,7 +154,7 @@ packages:
     source: hosted
     version: "0.3.1"
   button_m3e:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: button_m3e
       sha256: "6754ddeb9068ad2005bd26d5ceabc41268029465095686d7d228296c2e706909"
