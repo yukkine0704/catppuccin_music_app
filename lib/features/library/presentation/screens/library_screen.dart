@@ -57,7 +57,11 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     Flavor flavor,
   ) {
     if (state.isLoading && tracks.isEmpty) {
-      return Center(child: CircularProgressIndicator(color: flavor.mauve));
+      return const Center(
+        child: LoadingIndicatorM3E(
+          variant: LoadingIndicatorM3EVariant.contained, // default, contained
+        ),
+      );
     }
 
     if (state.error != null && tracks.isEmpty) {
