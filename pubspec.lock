@@ -857,7 +857,7 @@ packages:
     source: hosted
     version: "6.5.0"
   progress_indicator_m3e:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: progress_indicator_m3e
       sha256: "1a2ca029d14427d31093552a0e916b453f58643b78ef805ce6f4669845ac8f70"
