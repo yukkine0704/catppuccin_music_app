@@ -1,0 +1,47 @@
+name: catppuccin_music_app
+description: "A professional offline music player with Catppuccin & M3E."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # --- Estado y Utilidades ---
+  provider: ^6.1.1
+  path_provider: ^2.1.2
+  shared_preferences: ^2.2.2
+  connectivity_plus: ^7.0.0
+  permission_handler: ^12.0.1 # Crucial para leer archivos locales
+
+  # --- UI & Diseño (M3E + Catppuccin) ---
+  catppuccin_flutter: ^1.0.0
+  m3e_collection: ^0.3.7
+  m3e_design: ^0.2.1
+  app_bar_m3e: ^0.1.2
+  icon_button_m3e: ^0.2.1
+  loading_indicator_m3e: ^0.1.1
+  lottie: ^3.3.2
+  flutter_card_swiper: ^7.2.0
+  google_fonts: ^8.0.2
+  audio_video_progress_bar: ^2.0.3
+
+  # --- Audio & Datos ---
+  just_audio: ^0.10.5        # Motor de reproducción
+  audio_service: ^0.18.12    # Segundo plano y controles de bloqueo
+  on_audio_query: ^2.9.0     # Escaneo de metadatos y canciones locales
+  dio: ^5.4.0                # Para descargar metadatos faltantes
+  palette_generator: ^0.3.3  # Para que la UI reaccione al arte del disco (opcional)
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  build_runner: ^2.4.8
+  flutter_launcher_icons: ^0.14.3
+
+flutter:
+  uses-material-design: true
