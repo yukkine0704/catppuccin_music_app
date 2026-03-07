@@ -1,21 +1,29 @@
-import 'package:on_audio_query/on_audio_query.dart';
+import 'dart:io';
+
 import 'package:permission_handler/permission_handler.dart';
 
 import '../../domain/entities/track.dart';
 
-/// Data source for accessing local music files using on_audio_query.
+/// Data source for accessing local music files using file system scanning.
+/// Note: on_audio_query is commented out due to AGP namespace compatibility issues.
+/// This is a fallback implementation that scans common music directories.
 class LocalMusicDatasource {
-  final OnAudioQuery _audioQuery;
-
-  LocalMusicDatasource(this._audioQuery);
-
   /// Requests storage permissions.
   Future<bool> requestPermissions() async {
-    final status = await Permission.storage.request();
+    // Request storage permission
+    var status = await Permission.storage.status;
+    if (!status.isGranted) {
+      status = await Permission.storage.request();
+    }
+
     if (status.isGranted) return true;
 
     // Try audio permission for newer Android versions
-    final audioStatus = await Permission.audio.request();
+    var audioStatus = await Permission.audio.status;
+    if (!audioStatus.isGranted) {
+      audioStatus = await Permission.audio.request();
+    }
+
     return audioStatus.isGranted;
   }
 
@@ -26,73 +34,52 @@ class LocalMusicDatasource {
       throw Exception('Storage permission not granted');
     }
 
-    final songs = await _audioQuery.querySongs(
-      sortType: SongSortType.TITLE,
-      orderType: OrderType.ASC_OR_SMALLER,
-      uriType: UriType.EXTERNAL,
-      ignoreCase: true,
-    );
+    final tracks = <Track>[];
+    final musicDirs = [
+      Directory('/storage/emulated/0/Music'),
+      Directory('/storage/emulated/0/Download'),
+      Directory('/storage/emulated/0/DCIM'),
+    ];
 
-    return songs.map(_mapSongModelToTrack).toList();
+    int id = 0;
+    for (final dir in musicDirs) {
+      if (await dir.exists()) {
+        await for (final entity in dir.list(recursive: true)) {
+          if (entity is File) {
+            final path = entity.path.toLowerCase();
+            if (path.endsWith('.mp3') ||
+                path.endsWith('.m4a') ||
+                path.endsWith('.wav') ||
+                path.endsWith('.flac')) {
+              // Basic metadata extraction from filename
+              final fileName = entity.path.split('/').last;
+              final nameWithoutExt = fileName.replaceAll(
+                RegExp(r'\.[^.]+$'),
+                '',
+              );
+              final parts = nameWithoutExt.split(' - ');
+
+              tracks.add(
+                Track(
+                  id: id++,
+                  title: parts.length > 1 ? parts[1] : nameWithoutExt,
+                  artist: parts.isNotEmpty ? parts[0] : 'Unknown Artist',
+                  album: 'Unknown Album',
+                  filePath: entity.path,
+                  duration: 0, // Would need a proper audio decoder
+                ),
+              );
+            }
+          }
+        }
+      }
+    }
+
+    return tracks;
   }
 
-  /// Fetches songs by artist.
-  Future<List<Track>> getSongsByArtist(String artist) async {
-    final songs = await _audioQuery.queryAudiosFrom(
-      AudiosFromType.ARTIST,
-      artist,
-      sortType: SongSortType.TITLE,
-    );
-
-    return songs.map(_mapSongModelToTrack).toList();
-  }
-
-  /// Fetches songs by album.
-  Future<List<Track>> getSongsByAlbum(String album) async {
-    final songs = await _audioQuery.queryAudiosFrom(
-      AudiosFromType.ALBUM,
-      album,
-      sortType: SongSortType.TITLE,
-    );
-
-    return songs.map(_mapSongModelToTrack).toList();
-  }
-
-  /// Gets all albums.
-  Future<List<dynamic>> getAllAlbums() async {
-    return _audioQuery.queryAlbums(
-      sortType: AlbumSortType.ALBUM,
-      orderType: OrderType.ASC_OR_SMALLER,
-    );
-  }
-
-  /// Gets all artists.
-  Future<List<dynamic>> getAllArtists() async {
-    return _audioQuery.queryArtists(
-      sortType: ArtistSortType.ARTIST,
-      orderType: OrderType.ASC_OR_SMALLER,
-    );
-  }
-
-  /// Gets artwork for a song.
+  /// Gets artwork for a song (placeholder - would need native implementation).
   Future<dynamic> getArtwork(int id) async {
-    return _audioQuery.queryArtwork(
-      id,
-      ArtworkType.AUDIO,
-      format: ArtworkFormat.JPEG,
-      size: 500,
-    );
-  }
-
-  Track _mapSongModelToTrack(SongModel song) {
-    return Track(
-      id: song.id,
-      title: song.title,
-      artist: song.artist ?? 'Unknown Artist',
-      album: song.album ?? 'Unknown Album',
-      filePath: song.data,
-      duration: song.duration ?? 0,
-      trackNumber: song.track,
-    );
+    return null;
   }
 }
