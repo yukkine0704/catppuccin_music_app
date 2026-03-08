@@ -6,6 +6,7 @@ import '../../../audio_player/presentation/widgets/mini_player.dart';
 import '../../../library/presentation/screens/library_screen.dart';
 import '../../../settings/presentation/providers/flavor_provider.dart';
 import '../../../settings/presentation/screens/settings_screen.dart';
+import 'albums_screen.dart';
 import 'home_content_screen.dart';
 
 /// Main home screen shell with bottom navigation (4 tabs).
@@ -22,6 +23,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   final List<Widget> _screens = [
     const HomeContentScreen(),
+    const AlbumsScreen(),
     const LibraryScreen(),
     // NowPlayingScreen removed - will be shown via DraggableScrollableSheet
     const SettingsScreen(),
@@ -79,6 +81,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 icon: Icon(Icons.home_outlined, color: flavor.subtext1),
                 selectedIcon: Icon(Icons.home_rounded, color: flavor.mauve),
                 label: 'Home',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.album_rounded, color: flavor.subtext1),
+                selectedIcon: Icon(Icons.album_rounded, color: flavor.mauve),
+                label: 'Álbumes',
               ),
               NavigationDestination(
                 icon: Icon(
