@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../../library/domain/entities/track.dart';
 import '../../data/datasources/audio_player_service.dart';
+import 'history_provider.dart';
 
 /// Provider for AudioHandler (background service).
 final audioHandlerProvider = Provider<AudioHandler>((ref) {
@@ -66,8 +67,10 @@ class PlayerState {
 /// Notifier for managing audio playback state.
 class AudioPlayerNotifier extends StateNotifier<PlayerState> {
   final AudioHandler _audioHandler;
+  final Ref _ref;
 
-  AudioPlayerNotifier(this._audioHandler) : super(const PlayerState()) {
+  AudioPlayerNotifier(this._audioHandler, this._ref)
+    : super(const PlayerState()) {
     _init();
   }
 
@@ -120,6 +123,11 @@ class AudioPlayerNotifier extends StateNotifier<PlayerState> {
         queue: tracks,
         currentTrackIndex: startIndex,
       );
+
+      // Add to history
+      _ref
+          .read(historyProvider.notifier)
+          .addToRecentlyPlayed(tracks[startIndex]);
     } catch (e) {
       state = state.copyWith(isLoading: false);
     }
@@ -248,7 +256,7 @@ class AudioPlayerNotifier extends StateNotifier<PlayerState> {
 final audioPlayerProvider =
     StateNotifierProvider<AudioPlayerNotifier, PlayerState>((ref) {
       final handler = ref.watch(audioHandlerProvider);
-      return AudioPlayerNotifier(handler);
+      return AudioPlayerNotifier(handler, ref);
     });
 
 /// Provider for position stream.

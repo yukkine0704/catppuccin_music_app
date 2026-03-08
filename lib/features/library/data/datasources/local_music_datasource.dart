@@ -67,6 +67,7 @@ class LocalMusicDatasource {
                   album: 'Unknown Album',
                   filePath: entity.path,
                   duration: 0, // Would need a proper audio decoder
+                  dateAdded: await entity.lastModified(),
                 ),
               );
             }

@@ -79,3 +79,25 @@ final filteredTracksProvider = Provider<List<Track>>((ref) {
         track.album.toLowerCase().contains(query);
   }).toList();
 });
+
+/// Provider for tracks sorted by date added (newest first).
+final recentTracksProvider = Provider<List<Track>>((ref) {
+  final state = ref.watch(libraryProvider);
+  final tracks = List<Track>.from(state.tracks);
+
+  // Sort by dateAdded descending (newest first)
+  tracks.sort((a, b) {
+    if (a.dateAdded == null && b.dateAdded == null) return 0;
+    if (a.dateAdded == null) return 1;
+    if (b.dateAdded == null) return -1;
+    return b.dateAdded!.compareTo(a.dateAdded!);
+  });
+
+  return tracks;
+});
+
+/// Provider for the last 10 recent tracks (for carousel).
+final lastTenTracksProvider = Provider<List<Track>>((ref) {
+  final recentTracks = ref.watch(recentTracksProvider);
+  return recentTracks.take(10).toList();
+});

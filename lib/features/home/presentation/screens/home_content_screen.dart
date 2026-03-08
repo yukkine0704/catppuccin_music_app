@@ -1,9 +1,15 @@
+import 'package:app_bar_m3e/app_bar_m3e.dart';
 import 'package:catppuccin_flutter/catppuccin_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:icon_button_m3e/icon_button_m3e.dart';
 
+import '../../../audio_player/presentation/providers/audio_player_provider.dart';
+import '../../../library/domain/entities/track.dart';
+import '../../../library/presentation/providers/library_provider.dart';
 import '../../../settings/presentation/providers/flavor_provider.dart';
+import 'history_screen.dart';
+import 'most_played_screen.dart';
 
 /// Home content screen with CustomScrollView layout.
 /// Features: Header, Search, Carousel, Quick Actions, Recently Played
@@ -19,18 +25,6 @@ class _HomeContentScreenState extends ConsumerState<HomeContentScreen> {
     viewportFraction: 0.85,
   );
   int _currentCarouselPage = 0;
-
-  // Mock data for trending carousel
-  final List<Map<String, String>> _trendingData = [
-    {
-      'title': 'Midnight Vibes',
-      'artist': 'The Lo-Fi Collective',
-      'color': '0xFF6366F1',
-    },
-    {'title': 'Summer Heat', 'artist': 'Tropical Waves', 'color': '0xFFEC4899'},
-    {'title': 'Urban Dreams', 'artist': 'City Lights', 'color': '0xFF14B8A6'},
-    {'title': 'Retro Soul', 'artist': 'Classic Beats', 'color': '0xFFF59E0B'},
-  ];
 
   // Mock data for recently played
   final List<Map<String, String>> _recentlyPlayedData = [
@@ -65,7 +59,7 @@ class _HomeContentScreenState extends ConsumerState<HomeContentScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Hot Releases',
+                    'Añadidas recientemente',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       color: flavor.text,
                       fontWeight: FontWeight.bold,
@@ -115,7 +109,7 @@ class _HomeContentScreenState extends ConsumerState<HomeContentScreen> {
           ),
 
           // =====================
-          // 3. CAROUSEL SECTION (Trending)
+          // 3. CAROUSEL SECTION (Recently Added)
           // =====================
           SliverToBoxAdapter(
             child: Padding(
@@ -124,44 +118,77 @@ class _HomeContentScreenState extends ConsumerState<HomeContentScreen> {
                 children: [
                   SizedBox(
                     height: 220,
-                    child: PageView.builder(
-                      controller: _carouselController,
-                      itemCount: _trendingData.length,
-                      onPageChanged: (index) {
-                        setState(() {
-                          _currentCarouselPage = index;
-                        });
-                      },
-                      itemBuilder: (context, index) {
-                        final item = _trendingData[index];
-                        final colorValue = int.parse(item['color']!);
-                        return _TrendingCard(
-                          title: item['title']!,
-                          artist: item['artist']!,
-                          cardColor: Color(colorValue),
-                          flavor: flavor,
+                    child: Consumer(
+                      builder: (context, ref, child) {
+                        final recentTracks = ref.watch(lastTenTracksProvider);
+                        final carouselTracks = recentTracks.isNotEmpty
+                            ? recentTracks
+                            : <Track>[];
+                        final hasTracks = carouselTracks.isNotEmpty;
+
+                        return PageView.builder(
+                          controller: _carouselController,
+                          itemCount: hasTracks ? carouselTracks.length + 1 : 0,
+                          onPageChanged: (index) {
+                            setState(() {
+                              _currentCarouselPage = index;
+                            });
+                          },
+                          itemBuilder: (context, index) {
+                            // Last card is "View All"
+                            if (index == carouselTracks.length) {
+                              return _ViewAllCard(flavor: flavor);
+                            }
+
+                            final track = carouselTracks[index];
+                            final colors = [
+                              const Color(0xFF6366F1),
+                              const Color(0xFFEC4899),
+                              const Color(0xFF14B8A6),
+                              const Color(0xFFF59E0B),
+                            ];
+                            final colorValue = colors[index % colors.length];
+                            return _TrendingCard(
+                              title: track.title,
+                              artist: track.artist,
+                              cardColor: colorValue,
+                              flavor: flavor,
+                              dateAdded: track.dateAdded,
+                              track: track,
+                            );
+                          },
                         );
                       },
                     ),
                   ),
                   const SizedBox(height: 12),
                   // Page indicator
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(
-                      _trendingData.length,
-                      (index) => Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 4),
-                        width: _currentCarouselPage == index ? 24 : 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: _currentCarouselPage == index
-                              ? flavor.mauve
-                              : flavor.surface1,
-                          borderRadius: BorderRadius.circular(4),
+                  Consumer(
+                    builder: (context, ref, child) {
+                      final recentTracks = ref.watch(lastTenTracksProvider);
+                      final itemCount = recentTracks.isNotEmpty
+                          ? recentTracks.length + 1
+                          : 0;
+                      if (itemCount == 0) return const SizedBox.shrink();
+
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(
+                          itemCount,
+                          (index) => Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 4),
+                            width: _currentCarouselPage == index ? 24 : 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: _currentCarouselPage == index
+                                  ? flavor.mauve
+                                  : flavor.surface1,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -181,25 +208,50 @@ class _HomeContentScreenState extends ConsumerState<HomeContentScreen> {
                     icon: Icons.history_rounded,
                     label: 'Historial',
                     flavor: flavor,
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const HistoryScreen(),
+                        ),
+                      );
+                    },
                   ),
                   _QuickActionButton(
                     icon: Icons.favorite_rounded,
                     label: 'Favoritos',
                     flavor: flavor,
-                    onTap: () {},
+                    onTap: () {
+                      // TODO: Navigate to favorites
+                    },
                   ),
                   _QuickActionButton(
                     icon: Icons.trending_up_rounded,
                     label: 'Más reproducidas',
                     flavor: flavor,
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const MostPlayedScreen(),
+                        ),
+                      );
+                    },
                   ),
                   _QuickActionButton(
                     icon: Icons.shuffle_rounded,
                     label: 'Shuffle',
                     flavor: flavor,
-                    onTap: () {},
+                    onTap: () {
+                      // Shuffle all tracks
+                      final tracks = ref.read(filteredTracksProvider);
+                      if (tracks.isNotEmpty) {
+                        final shuffled = List<Track>.from(tracks)..shuffle();
+                        ref
+                            .read(audioPlayerProvider.notifier)
+                            .playTracks(shuffled);
+                      }
+                    },
                   ),
                 ],
               ),
@@ -251,21 +303,38 @@ class _HomeContentScreenState extends ConsumerState<HomeContentScreen> {
 }
 
 /// Trending carousel card widget
-class _TrendingCard extends StatelessWidget {
+class _TrendingCard extends ConsumerWidget {
   final String title;
   final String artist;
   final Color cardColor;
   final Flavor flavor;
+  final DateTime? dateAdded;
+  final Track? track;
 
   const _TrendingCard({
     required this.title,
     required this.artist,
     required this.cardColor,
     required this.flavor,
+    this.dateAdded,
+    this.track,
   });
 
+  bool get _isNew {
+    if (dateAdded == null) return false;
+    final now = DateTime.now();
+    final difference = now.difference(dateAdded!);
+    return difference.inDays < 7; // Less than 1 week
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Handle artist display: if artist is 'Unknown Artist', show file path info
+    final displayArtist = artist == 'Unknown Artist'
+        ? 'Unknown Artist'
+        : artist;
+    final displayTitle = title;
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
@@ -317,46 +386,318 @@ class _TrendingCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    'Trending',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
+                // Chip moved to top left - only show if less than 1 week old
+                if (_isNew)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      'Nuevo',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 12),
+                if (_isNew) const SizedBox(height: 12),
+                // Artist on top
                 Text(
-                  title,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  artist,
+                  displayArtist,
                   style: TextStyle(
                     color: Colors.white.withValues(alpha: 0.8),
                     fontSize: 14,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                // Title below artist
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        displayTitle,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    // Play button on the right
+                    if (track != null)
+                      Builder(
+                        builder: (context) {
+                          final currentTrack = track!;
+                          return IconButtonM3E(
+                            icon: Icon(
+                              Icons.play_circle_fill_rounded,
+                              color: Colors.white,
+                              size: 40,
+                            ),
+                            variant: IconButtonM3EVariant.standard,
+                            onPressed: () {
+                              final tracks = ref.read(lastTenTracksProvider);
+                              final index = tracks.indexOf(currentTrack);
+                              ref
+                                  .read(audioPlayerProvider.notifier)
+                                  .playTracks(tracks, startIndex: index);
+                            },
+                            tooltip: 'Reproducir',
+                          );
+                        },
+                      ),
+                  ],
                 ),
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+/// View All card widget for carousel
+class _ViewAllCard extends StatelessWidget {
+  final Flavor flavor;
+
+  const _ViewAllCard({required this.flavor});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        // Navigate to recent tracks screen
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const _RecentTracksScreen()),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 8),
+        decoration: BoxDecoration(
+          color: flavor.surface0,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: flavor.surface1, width: 1),
+        ),
+        child: Stack(
+          children: [
+            // Decorative circles
+            Positioned(
+              right: -20,
+              top: -20,
+              child: Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: flavor.mauve.withValues(alpha: 0.1),
+                ),
+              ),
+            ),
+            Positioned(
+              right: 30,
+              bottom: -30,
+              child: Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: flavor.mauve.withValues(alpha: 0.1),
+                ),
+              ),
+            ),
+            // Content
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: flavor.mauve.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      'Ver todas',
+                      style: TextStyle(
+                        color: flavor.mauve,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Icon(
+                    Icons.arrow_forward_rounded,
+                    color: flavor.text,
+                    size: 40,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Ver todas las pistas',
+                    style: TextStyle(
+                      color: flavor.text,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Recent tracks screen (like library but sorted newest to oldest)
+class _RecentTracksScreen extends ConsumerWidget {
+  const _RecentTracksScreen();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final flavor = ref.watch(flavorProvider);
+    final recentTracks = ref.watch(recentTracksProvider);
+
+    return Scaffold(
+      backgroundColor: flavor.base,
+      appBar: AppBarM3E(
+        titleText: 'Añadidas recientemente',
+        backgroundColor: flavor.crust.withValues(alpha: 0.8),
+        foregroundColor: flavor.text,
+      ),
+      body: recentTracks.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.music_off_rounded,
+                    size: 64,
+                    color: flavor.subtext1,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No hay canciones',
+                    style: TextStyle(color: flavor.text, fontSize: 18),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Añade música a tu dispositivo',
+                    style: TextStyle(color: flavor.subtext1, fontSize: 14),
+                  ),
+                ],
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: recentTracks.length,
+              itemBuilder: (context, index) {
+                final track = recentTracks[index];
+                return _TrackListTile(track: track, flavor: flavor);
+              },
+            ),
+    );
+  }
+}
+
+/// Track list tile for recent tracks screen
+class _TrackListTile extends ConsumerWidget {
+  final Track track;
+  final Flavor flavor;
+
+  const _TrackListTile({required this.track, required this.flavor});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ListTile(
+      leading: _buildAlbumArt(),
+      title: Text(
+        track.title,
+        style: TextStyle(color: flavor.text, fontWeight: FontWeight.w500),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      subtitle: Text(
+        track.artist,
+        style: TextStyle(color: flavor.subtext1),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      trailing: IconButton(
+        icon: Icon(
+          Icons.play_circle_fill_rounded,
+          color: flavor.mauve,
+          size: 32,
+        ),
+        onPressed: () {
+          final tracks = ref.read(recentTracksProvider);
+          final index = tracks.indexOf(track);
+          ref
+              .read(audioPlayerProvider.notifier)
+              .playTracks(tracks, startIndex: index);
+        },
+      ),
+      onTap: () {
+        final tracks = ref.read(recentTracksProvider);
+        final index = tracks.indexOf(track);
+        ref
+            .read(audioPlayerProvider.notifier)
+            .playTracks(tracks, startIndex: index);
+      },
+    );
+  }
+
+  Widget _buildAlbumArt() {
+    if (track.hasAlbumArt) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: track.albumArtBytes != null
+            ? Image.memory(
+                track.albumArtBytes!,
+                width: 48,
+                height: 48,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => _buildPlaceholder(),
+              )
+            : Image.asset(
+                track.albumArtPath!,
+                width: 48,
+                height: 48,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => _buildPlaceholder(),
+              ),
+      );
+    }
+    return _buildPlaceholder();
+  }
+
+  Widget _buildPlaceholder() {
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        color: flavor.surface1,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Icon(Icons.music_note_rounded, color: flavor.subtext1),
     );
   }
 }
@@ -390,7 +731,11 @@ class _QuickActionButton extends StatelessWidget {
               shape: BoxShape.circle,
               border: Border.all(color: flavor.surface1, width: 1),
             ),
-            child: Icon(icon, color: flavor.mauve, size: 24),
+            child: IconButtonM3E(
+              icon: Icon(icon, color: flavor.mauve, size: 24),
+              variant: IconButtonM3EVariant.tonal,
+              onPressed: onTap,
+            ),
           ),
           const SizedBox(height: 8),
           SizedBox(
