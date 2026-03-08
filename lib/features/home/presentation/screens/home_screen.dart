@@ -1,22 +1,23 @@
-import 'package:catppuccin_flutter/catppuccin_flutter.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../audio_player/presentation/widgets/animated_player_sheet.dart';
 import '../../../audio_player/presentation/widgets/mini_player.dart';
 import '../../../library/presentation/screens/library_screen.dart';
+import '../../../settings/presentation/providers/flavor_provider.dart';
 import '../../../settings/presentation/screens/settings_screen.dart';
 import 'home_content_screen.dart';
 
 /// Main home screen shell with bottom navigation (4 tabs).
 /// Tab structure: Home, Library, Now Playing, Settings
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _currentIndex = 0;
 
   final List<Widget> _screens = [
@@ -55,7 +56,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final flavor = catppuccin.mocha;
+    final flavor = ref.watch(flavorProvider);
 
     return Scaffold(
       body: IndexedStack(index: _currentIndex, children: _screens),

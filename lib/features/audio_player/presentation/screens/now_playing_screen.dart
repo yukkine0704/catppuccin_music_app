@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:icon_button_m3e/icon_button_m3e.dart';
 import 'package:progress_indicator_m3e/progress_indicator_m3e.dart';
 
+import '../../../settings/presentation/providers/flavor_provider.dart';
 import '../providers/audio_player_provider.dart';
 
 /// Now Playing screen with vinyl animation - Redesigned version.
@@ -27,7 +28,7 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final flavor = catppuccin.mocha;
+    final flavor = ref.watch(flavorProvider);
     final playerState = ref.watch(audioPlayerProvider);
 
     return Scaffold(

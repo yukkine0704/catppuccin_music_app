@@ -1,17 +1,20 @@
 import 'package:catppuccin_flutter/catppuccin_flutter.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:icon_button_m3e/icon_button_m3e.dart';
+
+import '../../../settings/presentation/providers/flavor_provider.dart';
 
 /// Home content screen with CustomScrollView layout.
 /// Features: Header, Search, Carousel, Quick Actions, Recently Played
-class HomeContentScreen extends StatefulWidget {
+class HomeContentScreen extends ConsumerStatefulWidget {
   const HomeContentScreen({super.key});
 
   @override
-  State<HomeContentScreen> createState() => _HomeContentScreenState();
+  ConsumerState<HomeContentScreen> createState() => _HomeContentScreenState();
 }
 
-class _HomeContentScreenState extends State<HomeContentScreen> {
+class _HomeContentScreenState extends ConsumerState<HomeContentScreen> {
   final PageController _carouselController = PageController(
     viewportFraction: 0.85,
   );
@@ -47,7 +50,7 @@ class _HomeContentScreenState extends State<HomeContentScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final flavor = catppuccin.mocha;
+    final flavor = ref.watch(flavorProvider);
 
     return SafeArea(
       child: CustomScrollView(

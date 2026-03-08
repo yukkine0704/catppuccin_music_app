@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:icon_button_m3e/icon_button_m3e.dart';
 import 'package:progress_indicator_m3e/progress_indicator_m3e.dart';
 
+import '../../../settings/presentation/providers/flavor_provider.dart';
 import '../providers/audio_player_provider.dart';
 import '../providers/player_animation_provider.dart';
 
@@ -122,7 +123,7 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
 
   @override
   Widget build(BuildContext context) {
-    final flavor = catppuccin.mocha;
+    final flavor = ref.watch(flavorProvider);
     final playerState = ref.watch(audioPlayerProvider);
     // Watch the animation style preference
     final animationStyle = ref.watch(playerAnimationStyleProvider);

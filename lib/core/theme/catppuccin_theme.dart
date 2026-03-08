@@ -106,8 +106,12 @@ class CatppuccinTheme {
 
   /// Maps Catppuccin colors to Material 3 ColorScheme fields.
   static ColorScheme _buildColorScheme(Flavor flavor) {
+    // Determine brightness based on flavor - Latte is the only light theme
+    final isLight = flavor == catppuccin.latte;
+    final brightness = isLight ? Brightness.light : Brightness.dark;
+
     return ColorScheme(
-      brightness: Brightness.dark,
+      brightness: brightness,
       primary: flavor.mauve,
       onPrimary: flavor.crust,
       primaryContainer: flavor.mauve.withValues(alpha: 0.3),

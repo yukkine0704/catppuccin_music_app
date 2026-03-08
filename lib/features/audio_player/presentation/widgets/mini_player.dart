@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:icon_button_m3e/icon_button_m3e.dart';
 
+import '../../../settings/presentation/providers/flavor_provider.dart';
 import '../providers/audio_player_provider.dart';
 
 /// Mini player widget displayed at the bottom of the screen above navigation bar.
@@ -17,7 +18,7 @@ class MiniPlayer extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final flavor = catppuccin.mocha;
+    final flavor = ref.watch(flavorProvider);
     final playerState = ref.watch(audioPlayerProvider);
 
     // Don't show mini player if no track is loaded

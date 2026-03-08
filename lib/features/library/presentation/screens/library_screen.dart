@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:m3e_collection/m3e_collection.dart';
 
 import '../../../audio_player/presentation/providers/audio_player_provider.dart';
+import '../../../settings/presentation/providers/flavor_provider.dart';
 import '../../domain/entities/track.dart';
 import '../providers/library_provider.dart';
 
@@ -27,7 +28,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final flavor = catppuccin.mocha;
+    final flavor = ref.watch(flavorProvider);
     final libraryState = ref.watch(libraryProvider);
     final tracks = ref.watch(filteredTracksProvider);
 
