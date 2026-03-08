@@ -11,6 +11,7 @@ import 'package:icon_button_m3e/icon_button_m3e.dart';
 import '../../../settings/presentation/providers/flavor_provider.dart';
 import '../providers/audio_player_provider.dart';
 import '../providers/player_animation_provider.dart';
+import 'queue_bottom_sheet.dart';
 
 /// Animated player sheet with spring physics for smooth transitions
 /// between mini player and full now playing screen.
@@ -36,10 +37,8 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
   static const double _springStiffness = 400.0;
   static const double _springDamping = 22.0;
 
-  // State for UI toggles
+  // State for UI toggle (favorite is not in player state)
   bool _isFavorite = false;
-  bool _isShuffleEnabled = false;
-  int _repeatMode = 0; // 0: off, 1: all, 2: one
 
   @override
   void initState() {
@@ -304,7 +303,7 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
             variant: IconButtonM3EVariant.tonal,
             size: IconButtonM3ESize.md,
             icon: Icon(Icons.queue_music_rounded, color: flavor.text),
-            onPressed: () {},
+            onPressed: () => QueueBottomSheet.show(context),
             tooltip: 'Queue',
           ),
         ],
@@ -480,29 +479,23 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
                 label: Icon(
                   Icons.shuffle_rounded,
                   size: 22,
-                  color: _isShuffleEnabled ? flavor.mauve : flavor.subtext1,
+                  color: state.shuffleEnabled ? flavor.mauve : flavor.subtext1,
                 ),
-                selected: _isShuffleEnabled,
-                onPressed: () {
-                  setState(() {
-                    _isShuffleEnabled = !_isShuffleEnabled;
-                  });
-                },
+                selected: state.shuffleEnabled,
+                onPressed: () => notifier.toggleShuffle(),
               ),
               ButtonGroupM3EAction(
                 label: Icon(
-                  _repeatMode == 2
+                  state.repeatMode == PlayerRepeatMode.one
                       ? Icons.repeat_one_rounded
                       : Icons.repeat_rounded,
                   size: 22,
-                  color: _repeatMode > 0 ? flavor.mauve : flavor.subtext1,
+                  color: state.repeatMode != PlayerRepeatMode.off
+                      ? flavor.mauve
+                      : flavor.subtext1,
                 ),
-                selected: _repeatMode > 0,
-                onPressed: () {
-                  setState(() {
-                    _repeatMode = (_repeatMode + 1) % 3;
-                  });
-                },
+                selected: state.repeatMode != PlayerRepeatMode.off,
+                onPressed: () => notifier.cycleRepeatMode(),
               ),
               ButtonGroupM3EAction(
                 label: Icon(

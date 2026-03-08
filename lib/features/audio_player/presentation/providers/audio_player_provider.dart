@@ -10,6 +10,9 @@ final audioHandlerProvider = Provider<AudioHandler>((ref) {
   return getIt<AudioHandler>();
 });
 
+/// Repeat mode enum for the player state.
+enum PlayerRepeatMode { off, all, one }
+
 /// State for the currently playing track.
 class PlayerState {
   final Track? currentTrack;
@@ -17,6 +20,10 @@ class PlayerState {
   final Duration position;
   final Duration duration;
   final bool isLoading;
+  final PlayerRepeatMode repeatMode;
+  final bool shuffleEnabled;
+  final List<Track> queue;
+  final int currentTrackIndex;
 
   const PlayerState({
     this.currentTrack,
@@ -24,6 +31,10 @@ class PlayerState {
     this.position = Duration.zero,
     this.duration = Duration.zero,
     this.isLoading = false,
+    this.repeatMode = PlayerRepeatMode.off,
+    this.shuffleEnabled = false,
+    this.queue = const [],
+    this.currentTrackIndex = 0,
   });
 
   PlayerState copyWith({
@@ -32,6 +43,10 @@ class PlayerState {
     Duration? position,
     Duration? duration,
     bool? isLoading,
+    PlayerRepeatMode? repeatMode,
+    bool? shuffleEnabled,
+    List<Track>? queue,
+    int? currentTrackIndex,
   }) {
     return PlayerState(
       currentTrack: currentTrack ?? this.currentTrack,
@@ -39,6 +54,10 @@ class PlayerState {
       position: position ?? this.position,
       duration: duration ?? this.duration,
       isLoading: isLoading ?? this.isLoading,
+      repeatMode: repeatMode ?? this.repeatMode,
+      shuffleEnabled: shuffleEnabled ?? this.shuffleEnabled,
+      queue: queue ?? this.queue,
+      currentTrackIndex: currentTrackIndex ?? this.currentTrackIndex,
     );
   }
 }
@@ -59,6 +78,16 @@ class AudioPlayerNotifier extends StateNotifier<PlayerState> {
         position: playbackState.updatePosition,
       );
     });
+
+    // Also listen to the service for queue and current track changes
+    final service = _audioHandler as AudioPlayerService;
+    service.currentTrackStream.listen((track) {
+      state = state.copyWith(
+        currentTrack: track,
+        queue: service.trackQueue,
+        currentTrackIndex: service.currentTrackIndex,
+      );
+    });
   }
 
   /// Plays a list of tracks.
@@ -73,6 +102,8 @@ class AudioPlayerNotifier extends StateNotifier<PlayerState> {
       state = state.copyWith(
         currentTrack: tracks[startIndex],
         isLoading: false,
+        queue: tracks,
+        currentTrackIndex: startIndex,
       );
     } catch (e) {
       state = state.copyWith(isLoading: false);
@@ -116,6 +147,67 @@ class AudioPlayerNotifier extends StateNotifier<PlayerState> {
   /// Skips to previous track.
   Future<void> skipToPrevious() async {
     await _audioHandler.skipToPrevious();
+  }
+
+  /// Sets the repeat mode.
+  Future<void> setRepeatMode(PlayerRepeatMode mode) async {
+    final service = _audioHandler as AudioPlayerService;
+    RepeatMode repeatMode;
+    switch (mode) {
+      case PlayerRepeatMode.off:
+        repeatMode = RepeatMode.off;
+        break;
+      case PlayerRepeatMode.all:
+        repeatMode = RepeatMode.all;
+        break;
+      case PlayerRepeatMode.one:
+        repeatMode = RepeatMode.one;
+        break;
+    }
+    await service.setPlayerRepeatMode(repeatMode);
+    state = state.copyWith(repeatMode: mode);
+  }
+
+  /// Cycles through repeat modes.
+  Future<void> cycleRepeatMode() async {
+    final currentMode = state.repeatMode;
+    PlayerRepeatMode newMode;
+    switch (currentMode) {
+      case PlayerRepeatMode.off:
+        newMode = PlayerRepeatMode.all;
+        break;
+      case PlayerRepeatMode.all:
+        newMode = PlayerRepeatMode.one;
+        break;
+      case PlayerRepeatMode.one:
+        newMode = PlayerRepeatMode.off;
+        break;
+    }
+    await setRepeatMode(newMode);
+  }
+
+  /// Toggles shuffle mode.
+  Future<void> toggleShuffle() async {
+    final service = _audioHandler as AudioPlayerService;
+    await service.toggleShuffle();
+    state = state.copyWith(shuffleEnabled: service.isShuffleEnabled);
+  }
+
+  /// Reorders the queue.
+  Future<void> reorderQueue(int oldIndex, int newIndex) async {
+    final service = _audioHandler as AudioPlayerService;
+    await service.reorderQueue(oldIndex, newIndex);
+    state = state.copyWith(
+      queue: service.trackQueue,
+      currentTrackIndex: service.currentTrackIndex,
+    );
+  }
+
+  /// Adds tracks to the queue.
+  Future<void> addToQueue(List<Track> tracks) async {
+    final service = _audioHandler as AudioPlayerService;
+    await service.addToQueue(tracks);
+    state = state.copyWith(queue: service.trackQueue);
   }
 }
 

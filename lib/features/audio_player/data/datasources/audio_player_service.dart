@@ -4,6 +4,9 @@ import 'package:rxdart/rxdart.dart';
 
 import '../../../library/domain/entities/track.dart';
 
+/// Repeat mode for playback.
+enum RepeatMode { off, all, one }
+
 /// Audio player service that extends BaseAudioHandler for background playback.
 class AudioPlayerService extends BaseAudioHandler
     with QueueHandler, SeekHandler {
@@ -11,6 +14,8 @@ class AudioPlayerService extends BaseAudioHandler
 
   final List<Track> _tracks = [];
   int _currentIndex = 0;
+  ConcatenatingAudioSource? _playlist;
+  bool _shuffleEnabled = false;
 
   final _trackSubject = BehaviorSubject<Track?>.seeded(null);
 
@@ -81,6 +86,7 @@ class AudioPlayerService extends BaseAudioHandler
       useLazyPreparation: true,
       children: audioSources,
     );
+    _playlist = playlist;
 
     await _player.setAudioSource(playlist, initialIndex: startIndex);
     _trackSubject.add(tracks[startIndex]);
@@ -135,6 +141,90 @@ class AudioPlayerService extends BaseAudioHandler
   @override
   Future<void> setSpeed(double speed) async {
     await _player.setSpeed(speed);
+  }
+
+  /// Sets the repeat mode.
+  Future<void> setPlayerRepeatMode(RepeatMode mode) async {
+    switch (mode) {
+      case RepeatMode.off:
+        await _player.setLoopMode(LoopMode.off);
+        break;
+      case RepeatMode.all:
+        await _player.setLoopMode(LoopMode.all);
+        break;
+      case RepeatMode.one:
+        await _player.setLoopMode(LoopMode.one);
+        break;
+    }
+  }
+
+  /// Gets the current repeat mode.
+  RepeatMode get repeatMode {
+    switch (_player.loopMode) {
+      case LoopMode.off:
+        return RepeatMode.off;
+      case LoopMode.all:
+        return RepeatMode.all;
+      case LoopMode.one:
+        return RepeatMode.one;
+    }
+  }
+
+  /// Toggles shuffle mode.
+  Future<void> toggleShuffle() async {
+    // Toggle internal shuffle state
+    // Note: just_audio's ConcatenatingAudioSource doesn't have a direct shuffle method
+    // Shuffle is handled by the player when shuffle mode is enabled
+    _shuffleEnabled = !_shuffleEnabled;
+    // Enable shuffle on the player
+    await _player.setShuffleModeEnabled(_shuffleEnabled);
+  }
+
+  /// Gets the current shuffle mode.
+  bool get isShuffleEnabled => _shuffleEnabled;
+
+  /// Gets the current queue of tracks.
+  List<Track> get trackQueue => List.unmodifiable(_tracks);
+
+  /// Gets the current track index.
+  int get currentTrackIndex => _currentIndex;
+
+  /// Reorders the queue.
+  Future<void> reorderQueue(int oldIndex, int newIndex) async {
+    if (_playlist != null) {
+      await _playlist!.move(oldIndex, newIndex);
+      // Update internal tracks list
+      final track = _tracks.removeAt(oldIndex);
+      _tracks.insert(newIndex, track);
+      // Update current index if needed
+      if (oldIndex == _currentIndex) {
+        _currentIndex = newIndex;
+      } else if (oldIndex < _currentIndex && newIndex >= _currentIndex) {
+        _currentIndex--;
+      } else if (oldIndex > _currentIndex && newIndex <= _currentIndex) {
+        _currentIndex++;
+      }
+    }
+  }
+
+  /// Adds tracks to the queue.
+  Future<void> addToQueue(List<Track> tracks) async {
+    _tracks.addAll(tracks);
+    if (_playlist != null) {
+      final audioSources = tracks.map((track) {
+        return AudioSource.file(
+          track.filePath,
+          tag: MediaItem(
+            id: track.id.toString(),
+            title: track.title,
+            artist: track.artist,
+            album: track.album,
+            duration: Duration(milliseconds: track.duration),
+          ),
+        );
+      }).toList();
+      await _playlist!.addAll(audioSources);
+    }
   }
 
   /// Gets the current position stream.
