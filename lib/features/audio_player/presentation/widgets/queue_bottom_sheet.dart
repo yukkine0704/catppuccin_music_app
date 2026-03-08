@@ -159,6 +159,9 @@ class QueueBottomSheet extends ConsumerWidget {
           flavor: flavor,
           isCurrentTrack: isCurrentTrack,
           index: index,
+          onTap: () {
+            ref.read(audioPlayerProvider.notifier).playTrackAtIndex(index);
+          },
         );
       },
     );
@@ -166,11 +169,12 @@ class QueueBottomSheet extends ConsumerWidget {
 }
 
 /// Individual track tile in the queue list.
-class _QueueTrackTile extends StatelessWidget {
+class _QueueTrackTile extends StatefulWidget {
   final Track track;
   final Flavor flavor;
   final bool isCurrentTrack;
   final int index;
+  final VoidCallback onTap;
 
   const _QueueTrackTile({
     super.key,
@@ -178,43 +182,127 @@ class _QueueTrackTile extends StatelessWidget {
     required this.flavor,
     required this.isCurrentTrack,
     required this.index,
+    required this.onTap,
   });
 
   @override
+  State<_QueueTrackTile> createState() => _QueueTrackTileState();
+}
+
+class _QueueTrackTileState extends State<_QueueTrackTile>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _glowController;
+  late Animation<double> _glowAnimation;
+  bool _isPressed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _glowController = AnimationController(
+      duration: const Duration(milliseconds: 2000),
+      vsync: this,
+    );
+    _glowAnimation = Tween<double>(begin: 0.3, end: 0.6).animate(
+      CurvedAnimation(parent: _glowController, curve: Curves.easeInOut),
+    );
+    if (widget.isCurrentTrack) {
+      _glowController.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _QueueTrackTile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isCurrentTrack && !oldWidget.isCurrentTrack) {
+      _glowController.repeat(reverse: true);
+    } else if (!widget.isCurrentTrack && oldWidget.isCurrentTrack) {
+      _glowController.stop();
+      _glowController.reset();
+    }
+  }
+
+  @override
+  void dispose() {
+    _glowController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      decoration: BoxDecoration(
-        color: isCurrentTrack ? flavor.surface1 : Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
-        border: isCurrentTrack
-            ? Border.all(color: flavor.mauve.withValues(alpha: 0.5), width: 1)
-            : null,
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        leading: _buildLeading(),
-        title: _buildTitle(),
-        subtitle: _buildSubtitle(),
-        trailing: _buildTrailing(),
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _isPressed = true),
+      onTapUp: (_) => setState(() => _isPressed = false),
+      onTapCancel: () => setState(() => _isPressed = false),
+      onTap: widget.onTap,
+      child: AnimatedBuilder(
+        animation: _glowController,
+        builder: (context, child) {
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            margin: const EdgeInsets.symmetric(vertical: 4),
+            decoration: BoxDecoration(
+              color: _isPressed
+                  ? widget.flavor.surface1.withValues(alpha: 0.5)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 4,
+              ),
+              leading: _buildLeading(),
+              title: _buildTitle(),
+              subtitle: _buildSubtitle(),
+              trailing: _buildTrailing(),
+            ),
+          );
+        },
       ),
     );
   }
 
   Widget _buildLeading() {
-    if (track.hasAlbumArt) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: Image.memory(
-          track.albumArtBytes!,
+    return AnimatedBuilder(
+      animation: _glowAnimation,
+      builder: (context, child) {
+        return Container(
           width: 48,
           height: 48,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) => _buildDefaultAlbumArt(),
-        ),
-      );
-    }
-    return _buildDefaultAlbumArt();
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: widget.isCurrentTrack
+                ? [
+                    BoxShadow(
+                      color: widget.flavor.mauve.withValues(
+                        alpha: widget.isCurrentTrack
+                            ? _glowAnimation.value
+                            : 0.0,
+                      ),
+                      blurRadius: 12,
+                      spreadRadius: 2,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : null,
+          ),
+          child: child,
+        );
+      },
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: widget.track.hasAlbumArt
+            ? Image.memory(
+                widget.track.albumArtBytes!,
+                width: 48,
+                height: 48,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) =>
+                    _buildDefaultAlbumArt(),
+              )
+            : _buildDefaultAlbumArt(),
+      ),
+    );
   }
 
   Widget _buildDefaultAlbumArt() {
@@ -222,21 +310,25 @@ class _QueueTrackTile extends StatelessWidget {
       width: 48,
       height: 48,
       decoration: BoxDecoration(
-        color: flavor.surface1,
+        color: widget.flavor.surface1,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Icon(Icons.music_note_rounded, color: flavor.subtext1, size: 24),
+      child: Icon(
+        Icons.music_note_rounded,
+        color: widget.flavor.subtext1,
+        size: 24,
+      ),
     );
   }
 
   Widget _buildTitle() {
     return Text(
-      track.title,
+      widget.track.title,
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
       style: TextStyle(
-        color: isCurrentTrack ? flavor.mauve : flavor.text,
-        fontWeight: isCurrentTrack ? FontWeight.w600 : FontWeight.normal,
+        color: widget.isCurrentTrack ? widget.flavor.mauve : widget.flavor.text,
+        fontWeight: widget.isCurrentTrack ? FontWeight.w600 : FontWeight.normal,
         fontSize: 15,
       ),
     );
@@ -244,10 +336,10 @@ class _QueueTrackTile extends StatelessWidget {
 
   Widget _buildSubtitle() {
     return Text(
-      track.artist,
+      widget.track.artist,
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
-      style: TextStyle(color: flavor.subtext1, fontSize: 13),
+      style: TextStyle(color: widget.flavor.subtext1, fontSize: 13),
     );
   }
 
@@ -255,13 +347,105 @@ class _QueueTrackTile extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (isCurrentTrack)
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: Icon(Icons.equalizer_rounded, color: flavor.mauve, size: 20),
+        if (widget.isCurrentTrack)
+          const Padding(
+            padding: EdgeInsets.only(right: 8),
+            child: _AnimatedPlayingIndicator(),
           ),
-        Icon(Icons.drag_handle_rounded, color: flavor.subtext1, size: 20),
+        Icon(
+          Icons.drag_handle_rounded,
+          color: widget.flavor.subtext1,
+          size: 20,
+        ),
       ],
+    );
+  }
+}
+
+/// Animated playing indicator with equalizer bars.
+class _AnimatedPlayingIndicator extends ConsumerStatefulWidget {
+  const _AnimatedPlayingIndicator();
+
+  @override
+  ConsumerState<_AnimatedPlayingIndicator> createState() =>
+      _AnimatedPlayingIndicatorState();
+}
+
+class _AnimatedPlayingIndicatorState
+    extends ConsumerState<_AnimatedPlayingIndicator>
+    with TickerProviderStateMixin {
+  late List<AnimationController> _controllers;
+  late List<Animation<double>> _animations;
+
+  @override
+  void initState() {
+    super.initState();
+    _controllers = List.generate(
+      3,
+      (index) => AnimationController(
+        duration: Duration(milliseconds: 300 + (index * 100)),
+        vsync: this,
+      ),
+    );
+    _animations = _controllers.map((controller) {
+      return Tween<double>(
+        begin: 0.3,
+        end: 1.0,
+      ).animate(CurvedAnimation(parent: controller, curve: Curves.easeInOut));
+    }).toList();
+
+    // Start the animation loop
+    _startAnimationLoop();
+  }
+
+  void _startAnimationLoop() async {
+    while (mounted) {
+      for (final controller in _controllers) {
+        controller.forward();
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+      await Future.delayed(const Duration(milliseconds: 200));
+      for (final controller in _controllers) {
+        controller.reverse();
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+      await Future.delayed(const Duration(milliseconds: 300));
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final controller in _controllers) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final flavor = ref.watch(flavorProvider);
+    return SizedBox(
+      width: 20,
+      height: 20,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: List.generate(3, (index) {
+          return AnimatedBuilder(
+            animation: _animations[index],
+            builder: (context, child) {
+              return Container(
+                width: 4,
+                height: 20 * _animations[index].value,
+                decoration: BoxDecoration(
+                  color: flavor.mauve,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              );
+            },
+          );
+        }),
+      ),
     );
   }
 }

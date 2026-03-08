@@ -115,6 +115,18 @@ class AudioPlayerNotifier extends StateNotifier<PlayerState> {
     await playTracks([track], startIndex: 0);
   }
 
+  /// Plays a track at a specific index in the queue.
+  Future<void> playTrackAtIndex(int index) async {
+    if (index < 0 || index >= state.queue.length) return;
+
+    final service = _audioHandler as AudioPlayerService;
+    await service.playTracks(state.queue, startIndex: index);
+    state = state.copyWith(
+      currentTrack: state.queue[index],
+      currentTrackIndex: index,
+    );
+  }
+
   /// Pauses playback.
   Future<void> pause() async {
     await _audioHandler.pause();
