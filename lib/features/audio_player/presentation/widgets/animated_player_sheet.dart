@@ -33,9 +33,11 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
   double _dragExtent = 0.0;
   bool _isDragging = false;
 
-  // Spring physics parameters - M3E inspired
-  static const double _springStiffness = 400.0;
-  static const double _springDamping = 22.0;
+  // Spring physics parameters - M3E Expressive scheme
+  // Uses overshoot (bounce) for "heroic moments" like the player sheet
+  // Ref: md.sys.motion.spring.[velocity].[type]
+  static const double _springStiffness = 350.0;
+  static const double _springDamping = 15.0;
 
   // State for UI toggle (favorite is not in player state)
   bool _isFavorite = false;
@@ -316,54 +318,57 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
     PlayerState playerState,
     double value,
   ) {
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                playerState.currentTrack?.title ?? 'No hay canción',
-                style: TextStyle(
-                  color: flavor.text,
-                  fontSize: _lerp(14, 22, value),
-                  fontWeight: FontWeight.bold,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  playerState.currentTrack?.title ?? 'No hay canción',
+                  style: TextStyle(
+                    color: flavor.text,
+                    fontSize: _lerp(14, 22, value),
+                    fontWeight: FontWeight.bold,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                playerState.currentTrack?.artist ?? 'Unknown Artist',
-                style: TextStyle(
-                  color: flavor.subtext1,
-                  fontSize: _lerp(12, 16, value),
+                const SizedBox(height: 4),
+                Text(
+                  playerState.currentTrack?.artist ?? 'Unknown Artist',
+                  style: TextStyle(
+                    color: flavor.subtext1,
+                    fontSize: _lerp(12, 16, value),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-        IconButtonM3E(
-          variant: IconButtonM3EVariant.standard,
-          size: IconButtonM3ESize.lg,
-          icon: Icon(
-            _isFavorite
-                ? Icons.favorite_rounded
-                : Icons.favorite_border_rounded,
-            color: _isFavorite ? flavor.red : flavor.text,
+          IconButtonM3E(
+            variant: IconButtonM3EVariant.standard,
+            size: IconButtonM3ESize.lg,
+            icon: Icon(
+              _isFavorite
+                  ? Icons.favorite_rounded
+                  : Icons.favorite_border_rounded,
+              color: _isFavorite ? flavor.red : flavor.text,
+            ),
+            selectedIcon: Icon(Icons.favorite_rounded, color: flavor.red),
+            isSelected: _isFavorite,
+            onPressed: () {
+              setState(() {
+                _isFavorite = !_isFavorite;
+              });
+            },
+            tooltip: 'Add to favorites',
           ),
-          selectedIcon: Icon(Icons.favorite_rounded, color: flavor.red),
-          isSelected: _isFavorite,
-          onPressed: () {
-            setState(() {
-              _isFavorite = !_isFavorite;
-            });
-          },
-          tooltip: 'Add to favorites',
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -425,42 +430,51 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
     return Column(
       children: [
         // Main row
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            IconButtonM3E(
-              variant: IconButtonM3EVariant.standard,
-              size: IconButtonM3ESize.lg,
-              icon: Icon(
-                Icons.skip_previous_rounded,
-                color: flavor.text,
-                size: _lerp(28, 36, value),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              IconButtonM3E(
+                variant: IconButtonM3EVariant.tonal,
+                size: IconButtonM3ESize.lg,
+                icon: Icon(
+                  Icons.skip_previous_rounded,
+                  color: flavor.text,
+                  size: _lerp(28, 36, value),
+                ),
+                onPressed: () => notifier.skipToPrevious(),
+                tooltip: 'Previous',
               ),
-              onPressed: () => notifier.skipToPrevious(),
-            ),
-            IconButtonM3E(
-              variant: IconButtonM3EVariant.filled,
-              size: IconButtonM3ESize.lg,
-              icon: Icon(
-                state.isPlaying
-                    ? Icons.pause_rounded
-                    : Icons.play_arrow_rounded,
-                size: _lerp(32, 40, value),
-                color: flavor.base,
+              // Play/Pause button - M3E morphing IconButtonM3E
+              // Uses filled variant when playing (heroic moment), tonal when paused
+              // Using isSelected for proper morphing behavior with centered icon
+              IconButtonM3E(
+                variant: state.isPlaying
+                    ? IconButtonM3EVariant.filled
+                    : IconButtonM3EVariant.tonal,
+                size: IconButtonM3ESize.lg,
+                icon: Icon(
+                  state.isPlaying
+                      ? Icons.pause_rounded
+                      : Icons.play_arrow_rounded,
+                  size: _lerp(32, 40, value),
+                ),
+                onPressed: () => notifier.togglePlayPause(),
               ),
-              onPressed: () => notifier.togglePlayPause(),
-            ),
-            IconButtonM3E(
-              variant: IconButtonM3EVariant.standard,
-              size: IconButtonM3ESize.lg,
-              icon: Icon(
-                Icons.skip_next_rounded,
-                color: flavor.text,
-                size: _lerp(28, 36, value),
+              IconButtonM3E(
+                variant: IconButtonM3EVariant.tonal,
+                size: IconButtonM3ESize.lg,
+                icon: Icon(
+                  Icons.skip_next_rounded,
+                  color: flavor.text,
+                  size: _lerp(28, 36, value),
+                ),
+                onPressed: () => notifier.skipToNext(),
+                tooltip: 'Next',
               ),
-              onPressed: () => notifier.skipToNext(),
-            ),
-          ],
+            ],
+          ),
         ),
 
         const SizedBox(height: 32),
@@ -468,47 +482,152 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
         // Secondary row - ButtonGroupM3E in pill container
         Opacity(
           opacity: value,
-          child: ButtonGroupM3E(
-            type: ButtonGroupM3EType.connected,
-            shape: ButtonGroupM3EShape.round,
-            size: ButtonGroupM3ESize.sm,
-            selection: true,
-            style: ButtonM3EStyle.tonal,
-            actions: [
-              ButtonGroupM3EAction(
-                label: Icon(
-                  Icons.shuffle_rounded,
-                  size: 22,
-                  color: state.shuffleEnabled ? flavor.mauve : flavor.subtext1,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: ButtonGroupM3E(
+              type: ButtonGroupM3EType.connected,
+              shape: ButtonGroupM3EShape.round,
+              size: ButtonGroupM3ESize.md,
+              selection: true,
+              style: ButtonM3EStyle.tonal,
+              actions: [
+                ButtonGroupM3EAction(
+                  label: Icon(
+                    Icons.shuffle_rounded,
+                    size: 22,
+                    color: state.shuffleEnabled
+                        ? flavor.mauve
+                        : flavor.subtext1,
+                  ),
+                  selected: state.shuffleEnabled,
+                  onPressed: () => notifier.toggleShuffle(),
                 ),
-                selected: state.shuffleEnabled,
-                onPressed: () => notifier.toggleShuffle(),
-              ),
-              ButtonGroupM3EAction(
-                label: Icon(
-                  state.repeatMode == PlayerRepeatMode.one
-                      ? Icons.repeat_one_rounded
-                      : Icons.repeat_rounded,
-                  size: 22,
-                  color: state.repeatMode != PlayerRepeatMode.off
-                      ? flavor.mauve
-                      : flavor.subtext1,
+                ButtonGroupM3EAction(
+                  label: Icon(
+                    state.repeatMode == PlayerRepeatMode.one
+                        ? Icons.repeat_one_rounded
+                        : Icons.repeat_rounded,
+                    size: 22,
+                    color: state.repeatMode != PlayerRepeatMode.off
+                        ? flavor.mauve
+                        : flavor.subtext1,
+                  ),
+                  selected: state.repeatMode != PlayerRepeatMode.off,
+                  onPressed: () => notifier.cycleRepeatMode(),
                 ),
-                selected: state.repeatMode != PlayerRepeatMode.off,
-                onPressed: () => notifier.cycleRepeatMode(),
-              ),
-              ButtonGroupM3EAction(
-                label: Icon(
-                  Icons.lyrics_rounded,
-                  size: 22,
-                  color: flavor.subtext1,
+                ButtonGroupM3EAction(
+                  label: Icon(
+                    Icons.lyrics_rounded,
+                    size: 22,
+                    color: flavor.subtext1,
+                  ),
+                  onPressed: () {},
                 ),
-                onPressed: () {},
-              ),
-            ],
+              ],
+            ),
           ),
         ),
+
+        const SizedBox(height: 16),
+
+        // Next track section
+        _buildNextTrackSection(state, flavor),
       ],
+    );
+  }
+
+  Widget _buildNextTrackSection(PlayerState state, Flavor flavor) {
+    // Get next track from queue
+    final nextTrackIndex = state.currentTrackIndex + 1;
+    final hasNextTrack = nextTrackIndex < state.queue.length;
+
+    if (!hasNextTrack) {
+      return const SizedBox.shrink();
+    }
+
+    final nextTrack = state.queue[nextTrackIndex];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Material(
+        color: flavor.surface1.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => QueueBottomSheet.show(context),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                // Next track icon/album art
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: flavor.mauve.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: nextTrack.hasAlbumArt
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.memory(
+                            nextTrack.albumArtBytes!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Icon(
+                              Icons.music_note_rounded,
+                              color: flavor.mauve,
+                            ),
+                          ),
+                        )
+                      : Icon(Icons.music_note_rounded, color: flavor.mauve),
+                ),
+                const SizedBox(width: 12),
+                // Next track info
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'NEXT',
+                        style: TextStyle(
+                          color: flavor.subtext1,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        nextTrack.title,
+                        style: TextStyle(
+                          color: flavor.text,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        nextTrack.artist,
+                        style: TextStyle(color: flavor.subtext1, fontSize: 12),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                // Queue icon
+                Icon(
+                  Icons.queue_music_rounded,
+                  color: flavor.subtext1,
+                  size: 20,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
