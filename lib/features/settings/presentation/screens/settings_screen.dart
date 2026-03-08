@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:m3e_collection/m3e_collection.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../audio_player/presentation/providers/player_animation_provider.dart';
 import '../providers/flavor_provider.dart';
 
 /// Settings screen for app configuration.
@@ -146,6 +147,50 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
           const SizedBox(height: 24),
 
+          // Animation section
+          _buildSectionHeader('Animación', flavor),
+          _buildSettingsTile(
+            title: 'Estilo de animación',
+            subtitle: _getAnimationStyleName(
+              ref.watch(playerAnimationStyleProvider),
+              flavor,
+            ),
+            trailing: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: flavor.surface1,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: DropdownButton<PlayerAnimationStyle>(
+                value: ref.watch(playerAnimationStyleProvider),
+                dropdownColor: flavor.surface1,
+                underline: const SizedBox(),
+                icon: Icon(Icons.arrow_drop_down, color: flavor.text),
+                style: TextStyle(color: flavor.text, fontSize: 14),
+                items: [
+                  DropdownMenuItem(
+                    value: PlayerAnimationStyle.simple,
+                    child: Text('Simple', style: TextStyle(color: flavor.text)),
+                  ),
+                  DropdownMenuItem(
+                    value: PlayerAnimationStyle.vinyl,
+                    child: Text('Vinilo', style: TextStyle(color: flavor.text)),
+                  ),
+                ],
+                onChanged: (value) {
+                  if (value != null) {
+                    ref
+                        .read(playerAnimationStyleProvider.notifier)
+                        .setStyle(value);
+                  }
+                },
+              ),
+            ),
+            flavor: flavor,
+          ),
+
+          const SizedBox(height: 24),
+
           // About section
           _buildSectionHeader('Acerca de', flavor),
           _buildSettingsTile(
@@ -170,6 +215,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (flavor == catppuccin.frappe) return 'Frappé';
     if (flavor == catppuccin.macchiato) return 'Macchiato';
     return 'Mocha';
+  }
+
+  String _getAnimationStyleName(PlayerAnimationStyle style, Flavor flavor) {
+    switch (style) {
+      case PlayerAnimationStyle.vinyl:
+        return 'Vinilo giratorio';
+      case PlayerAnimationStyle.simple:
+        return 'Álbum simple';
+    }
   }
 
   Widget _buildSectionHeader(String title, Flavor flavor) {

@@ -1,7 +1,7 @@
 import 'package:catppuccin_flutter/catppuccin_flutter.dart';
 import 'package:flutter/material.dart';
 
-import '../../../audio_player/presentation/screens/now_playing_screen.dart';
+import '../../../audio_player/presentation/widgets/animated_player_sheet.dart';
 import '../../../audio_player/presentation/widgets/mini_player.dart';
 import '../../../library/presentation/screens/library_screen.dart';
 import '../../../settings/presentation/screens/settings_screen.dart';
@@ -26,38 +26,29 @@ class _HomeScreenState extends State<HomeScreen> {
     const SettingsScreen(),
   ];
 
-  /// Shows the NowPlayingScreen as a draggable bottom sheet.
+  /// Shows the NowPlayingScreen as an animated player sheet.
   void _showNowPlayingSheet(BuildContext context) {
-    final flavor = catppuccin.mocha;
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 1.0,
-        minChildSize: 0.5,
-        maxChildSize: 1.0,
-        builder: (context, scrollController) => Container(
-          decoration: BoxDecoration(
-            color: flavor.base,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-          ),
-          child: Column(
-            children: [
-              // Drag handle indicator
-              Container(
-                margin: const EdgeInsets.only(top: 12, bottom: 8),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: flavor.surface2,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              Expanded(child: NowPlayingScreen()),
-            ],
-          ),
-        ),
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            AnimatedPlayerSheet(onClose: () => Navigator.of(context).pop()),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          // Slide up transition from mini player position
+          const begin = Offset(0.0, 0.3);
+          const end = Offset.zero;
+          const curve = Curves.easeOutCubic;
+
+          var tween = Tween(
+            begin: begin,
+            end: end,
+          ).chain(CurveTween(curve: curve));
+
+          return SlideTransition(
+            position: animation.drive(tween),
+            child: child,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 350),
       ),
     );
   }
