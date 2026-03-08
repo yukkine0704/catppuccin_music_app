@@ -1,16 +1,16 @@
 import 'dart:math' as math;
 
+import 'package:button_group_m3e/button_group_m3e.dart'; // Asegúrate de tener la ruta correcta a tu ButtonGroupM3E
 import 'package:button_m3e/button_m3e.dart';
 import 'package:catppuccin_flutter/catppuccin_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:icon_button_m3e/icon_button_m3e.dart';
-import 'package:progress_indicator_m3e/progress_indicator_m3e.dart';
 
 import '../../../settings/presentation/providers/flavor_provider.dart';
 import '../providers/audio_player_provider.dart';
 
-/// Now Playing screen with vinyl animation - Redesigned version.
+/// Now Playing screen with vinyl animation - M3E Redesigned version.
 class NowPlayingScreen extends ConsumerStatefulWidget {
   final bool isInSheet;
 
@@ -21,10 +21,10 @@ class NowPlayingScreen extends ConsumerStatefulWidget {
 }
 
 class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen> {
-  // Placeholder states for UI (no functionality yet)
+  // M3E States
   bool _isFavorite = false;
   bool _isShuffleEnabled = false;
-  bool _isRepeatEnabled = false;
+  int _repeatMode = 0; // 0: off, 1: all, 2: one
 
   @override
   Widget build(BuildContext context) {
@@ -41,11 +41,9 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen> {
     );
   }
 
-  /// Builds content when used in a draggable sheet (swipe to dismiss).
   Widget _buildDraggableContent(Flavor flavor, PlayerState playerState) {
     return GestureDetector(
       onVerticalDragEnd: (details) {
-        // Close sheet when swiped down
         if (details.primaryVelocity != null && details.primaryVelocity! > 500) {
           Navigator.of(context).pop();
         }
@@ -54,19 +52,14 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen> {
     );
   }
 
-  /// Builds standard content (when used as standalone screen).
   Widget _buildStandardContent(Flavor flavor, PlayerState playerState) {
     return _buildContent(flavor, playerState);
   }
 
-  /// Main content builder.
   Widget _buildContent(Flavor flavor, PlayerState playerState) {
     return Column(
       children: [
-        // 1. Custom AppBar
         _buildCustomAppBar(flavor),
-
-        // 2. Album Art Section
         Expanded(
           flex: 4,
           child: Padding(
@@ -80,76 +73,62 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen> {
             ),
           ),
         ),
-
-        // 3. Music Info Row
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: _buildMusicInfoRow(flavor),
         ),
-
-        const SizedBox(height: 24),
-
-        // 4. Progress Section
+        const SizedBox(height: 16),
+        // Progress Section con Slider interactivo M3
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           child: _buildProgressSection(playerState, flavor),
         ),
-
-        const SizedBox(height: 24),
-
-        // 5. Control Panel
+        const SizedBox(height: 16),
+        // Control Panel con jerarquía y grupos
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: _buildControlPanel(playerState, flavor),
         ),
-
         const SizedBox(height: 32),
       ],
     );
   }
 
-  /// Custom AppBar: Row with collapse button (optional), "Listening to" text, and menu button.
   Widget _buildCustomAppBar(Flavor flavor) {
-    // Hide collapse button when in sheet mode (drag handle is in parent)
     final showCollapseButton = !widget.isInSheet;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Collapse button (arrow down)
           if (showCollapseButton)
+            // Variante Tonal para un fondo redondo sutil
             IconButtonM3E(
-              variant: IconButtonM3EVariant.standard,
+              variant: IconButtonM3EVariant.tonal,
               size: IconButtonM3ESize.md,
               icon: Icon(Icons.keyboard_arrow_down_rounded, color: flavor.text),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
+              onPressed: () => Navigator.of(context).pop(),
               tooltip: 'Collapse',
             )
           else
-            const SizedBox(width: 48), // Placeholder for alignment
+            const SizedBox(width: 48),
 
-          // "Listening to" text - Headline large and bold
           Text(
             'Listening to',
             style: TextStyle(
               color: flavor.text,
-              fontSize: 24,
+              fontSize: 22,
               fontWeight: FontWeight.bold,
             ),
           ),
 
-          // Menu/List button
+          // Variante Tonal para hacer simetría visual
           IconButtonM3E(
-            variant: IconButtonM3EVariant.standard,
+            variant: IconButtonM3EVariant.tonal,
             size: IconButtonM3ESize.md,
             icon: Icon(Icons.queue_music_rounded, color: flavor.text),
-            onPressed: () {
-              // TODO: Show queue/menu
-            },
+            onPressed: () {},
             tooltip: 'Queue',
           ),
         ],
@@ -157,30 +136,26 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen> {
     );
   }
 
-  /// Music Info Row: Title, Artist, and Favorite button.
   Widget _buildMusicInfoRow(Flavor flavor) {
     final playerState = ref.watch(audioPlayerProvider);
 
     return Row(
       children: [
-        // Track info - Left aligned column
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Song Title
               Text(
                 playerState.currentTrack?.title ?? 'No hay canción',
                 style: TextStyle(
                   color: flavor.text,
-                  fontSize: 22,
+                  fontSize: 24,
                   fontWeight: FontWeight.bold,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 4),
-              // Artist
               Text(
                 playerState.currentTrack?.artist ?? 'Unknown Artist',
                 style: TextStyle(color: flavor.subtext1, fontSize: 16),
@@ -190,8 +165,6 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen> {
             ],
           ),
         ),
-
-        // Favorite button - Heart
         IconButtonM3E(
           variant: IconButtonM3EVariant.standard,
           size: IconButtonM3ESize.lg,
@@ -201,58 +174,56 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen> {
                 : Icons.favorite_border_rounded,
             color: _isFavorite ? flavor.red : flavor.text,
           ),
-          selectedIcon: Icon(Icons.favorite_rounded, color: flavor.red),
           isSelected: _isFavorite,
-          onPressed: () {
-            setState(() {
-              _isFavorite = !_isFavorite;
-            });
-          },
+          onPressed: () => setState(() => _isFavorite = !_isFavorite),
           tooltip: 'Add to favorites',
         ),
       ],
     );
   }
 
-  /// Progress Section: LinearProgressIndicatorM3E with time labels.
   Widget _buildProgressSection(PlayerState state, Flavor flavor) {
     final position = state.position;
-    // Ensure duration is at least 1 second to avoid issues
     final duration = state.duration.inMilliseconds > 0
         ? state.duration
         : const Duration(seconds: 1);
 
-    // Calculate progress value (0.0 to 1.0)
-    final progress = duration.inMilliseconds > 0
-        ? (position.inMilliseconds / duration.inMilliseconds).clamp(0.0, 1.0)
-        : 0.0;
+    final progress = (position.inMilliseconds / duration.inMilliseconds).clamp(
+      0.0,
+      1.0,
+    );
 
     return Column(
       children: [
-        // LinearProgressIndicatorM3E
-        Container(
-          height: 4,
-          decoration: BoxDecoration(
-            color: flavor.surface2,
-            borderRadius: BorderRadius.circular(2),
+        SliderTheme(
+          data: SliderThemeData(
+            trackHeight: 4,
+            activeTrackColor: flavor.mauve,
+            inactiveTrackColor: flavor.surface1,
+            thumbColor: flavor.mauve,
+            overlayColor: flavor.mauve.withValues(alpha: 0.1),
+            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
+            trackShape: const RoundedRectSliderTrackShape(),
           ),
-          child: LinearProgressIndicatorM3E(value: progress),
+          child: Slider(
+            value: progress,
+            onChanged: (value) {
+              final seekTo = Duration(
+                milliseconds: (value * duration.inMilliseconds).toInt(),
+              );
+              ref.read(audioPlayerProvider.notifier).seek(seekTo);
+            },
+          ),
         ),
-
-        const SizedBox(height: 8),
-
-        // Time labels
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Current time - small font
               Text(
                 _formatDuration(position),
                 style: TextStyle(color: flavor.subtext1, fontSize: 12),
               ),
-              // Total duration - small font
               Text(
                 _formatDuration(duration),
                 style: TextStyle(color: flavor.subtext1, fontSize: 12),
@@ -264,120 +235,108 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen> {
     );
   }
 
-  /// Control Panel: Main row with Previous/Play-Pause/Next + Secondary row with Shuffle/Repeat/Lyrics.
   Widget _buildControlPanel(PlayerState state, Flavor flavor) {
     final notifier = ref.read(audioPlayerProvider.notifier);
 
     return Column(
       children: [
-        // Main row - Large buttons: Previous, Play/Pause, Next
+        // Controles Principales centrados
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            // Previous button - M3E
-            ButtonM3E(
-              onPressed: () => notifier.skipToPrevious(),
+            IconButtonM3E(
+              variant: IconButtonM3EVariant.standard,
+              size: IconButtonM3ESize.lg,
               icon: Icon(
                 Icons.skip_previous_rounded,
                 color: flavor.text,
                 size: 36,
               ),
-              label: const SizedBox.shrink(),
-              style: ButtonM3EStyle.text,
-              size: ButtonM3ESize.md,
+              onPressed: () => notifier.skipToPrevious(),
             ),
 
-            // Play/Pause - M3E filled button
-            ButtonM3E(
-              onPressed: () => notifier.togglePlayPause(),
+            // Usamos IconButtonM3EVariant.filled para garantizar que el ripple quede perfectamente centrado
+            IconButtonM3E(
+              variant: IconButtonM3EVariant.filled,
+              size: IconButtonM3ESize.lg,
               icon: Icon(
                 state.isPlaying
                     ? Icons.pause_rounded
                     : Icons.play_arrow_rounded,
-                color: flavor.crust,
                 size: 40,
+                color: flavor
+                    .base, // Color de contraste para el icono sobre el fondo lleno
               ),
-              label: const SizedBox.shrink(),
-              style: ButtonM3EStyle.filled,
-              size: ButtonM3ESize.lg,
+              onPressed: () => notifier.togglePlayPause(),
             ),
 
-            // Next button - M3E
-            ButtonM3E(
-              onPressed: () => notifier.skipToNext(),
+            IconButtonM3E(
+              variant: IconButtonM3EVariant.standard,
+              size: IconButtonM3ESize.lg,
               icon: Icon(Icons.skip_next_rounded, color: flavor.text, size: 36),
-              label: const SizedBox.shrink(),
-              style: ButtonM3EStyle.text,
-              size: ButtonM3ESize.md,
+              onPressed: () => notifier.skipToNext(),
             ),
           ],
         ),
 
-        const SizedBox(height: 24),
+        const SizedBox(height: 32),
 
-        // Secondary row - Small discrete buttons: Shuffle, Repeat, Lyrics
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            // Shuffle button
-            IconButtonM3E(
-              variant: IconButtonM3EVariant.standard,
-              size: IconButtonM3ESize.md,
-              icon: Icon(
-                Icons.shuffle_rounded,
-                color: _isShuffleEnabled ? flavor.mauve : flavor.subtext1,
-                size: 24,
+        // Fila Secundaria: Grupo "Connected" dentro de un overlay tipo píldora
+        Container(
+          decoration: BoxDecoration(
+            color: flavor.surface1, // Color de fondo de la píldora
+            borderRadius: BorderRadius.circular(50), // Totalmente redondeado
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+          child: ButtonGroupM3E(
+            type: ButtonGroupM3EType.connected,
+            shape: ButtonGroupM3EShape.round,
+            size: ButtonGroupM3ESize.sm,
+            style: ButtonM3EStyle
+                .text, // Text style usa el fondo del contenedor transparente
+            showDividers: true,
+            dividerColor: flavor.surface2,
+            dividerThickness: 1.5,
+            actions: [
+              // Pasamos el Icon en 'label' y 'icon: null' para arreglar el centrado del ripple
+              ButtonGroupM3EAction(
+                label: Icon(
+                  Icons.shuffle_rounded,
+                  color: _isShuffleEnabled ? flavor.mauve : flavor.subtext1,
+                  size: 22,
+                ),
+                icon: null,
+                onPressed: () =>
+                    setState(() => _isShuffleEnabled = !_isShuffleEnabled),
               ),
-              selectedIcon: Icon(Icons.shuffle_rounded, color: flavor.mauve),
-              isSelected: _isShuffleEnabled,
-              onPressed: () {
-                setState(() {
-                  _isShuffleEnabled = !_isShuffleEnabled;
-                });
-              },
-              tooltip: 'Shuffle',
-            ),
-
-            // Repeat button
-            IconButtonM3E(
-              variant: IconButtonM3EVariant.standard,
-              size: IconButtonM3ESize.md,
-              icon: Icon(
-                Icons.repeat_rounded,
-                color: _isRepeatEnabled ? flavor.mauve : flavor.subtext1,
-                size: 24,
+              ButtonGroupM3EAction(
+                label: Icon(
+                  _repeatMode == 2
+                      ? Icons.repeat_one_rounded
+                      : Icons.repeat_rounded,
+                  color: _repeatMode > 0 ? flavor.mauve : flavor.subtext1,
+                  size: 22,
+                ),
+                icon: null,
+                onPressed: () =>
+                    setState(() => _repeatMode = (_repeatMode + 1) % 3),
               ),
-              selectedIcon: Icon(Icons.repeat_rounded, color: flavor.mauve),
-              isSelected: _isRepeatEnabled,
-              onPressed: () {
-                setState(() {
-                  _isRepeatEnabled = !_isRepeatEnabled;
-                });
-              },
-              tooltip: 'Repeat',
-            ),
-
-            // Lyrics button
-            IconButtonM3E(
-              variant: IconButtonM3EVariant.standard,
-              size: IconButtonM3ESize.md,
-              icon: Icon(
-                Icons.lyrics_rounded,
-                color: flavor.subtext1,
-                size: 24,
+              ButtonGroupM3EAction(
+                label: Icon(
+                  Icons.lyrics_rounded,
+                  color: flavor.subtext1,
+                  size: 22,
+                ),
+                icon: null,
+                onPressed: () {},
               ),
-              onPressed: () {
-                // TODO: Show lyrics
-              },
-              tooltip: 'Lyrics',
-            ),
-          ],
+            ],
+          ),
         ),
       ],
     );
   }
 
-  /// Format duration to mm:ss format.
   String _formatDuration(Duration duration) {
     final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
     final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
@@ -385,7 +344,7 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen> {
   }
 }
 
-/// Animated vinyl widget - Round vinyl with album art inside.
+/// Animated vinyl widget (mantenido)
 class _VinylWidget extends StatefulWidget {
   final bool isPlaying;
   final dynamic albumArt;
@@ -410,12 +369,9 @@ class _VinylWidgetState extends State<_VinylWidget>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 3),
+      duration: const Duration(seconds: 4),
     );
-
-    if (widget.isPlaying) {
-      _controller.repeat();
-    }
+    if (widget.isPlaying) _controller.repeat();
   }
 
   @override
@@ -451,74 +407,58 @@ class _VinylWidgetState extends State<_VinylWidget>
   }
 
   Widget _buildVinyl(BuildContext context) {
-    final size = MediaQuery.of(context).size.width * 0.65;
+    final size = MediaQuery.of(context).size.width * 0.7;
     final flavor = widget.flavor;
 
-    // Round vinyl (circle)
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
-        shape: BoxShape.circle, // Completely round
+        shape: BoxShape.circle,
         color: flavor.surface0,
         boxShadow: [
           BoxShadow(
-            color: flavor.crust.withValues(alpha: 0.3),
-            blurRadius: 30,
-            spreadRadius: 5,
-            offset: const Offset(0, 10),
+            color: flavor.crust.withValues(alpha: 0.4),
+            blurRadius: 40,
+            offset: const Offset(0, 15),
           ),
         ],
       ),
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Vinyl grooves (concentric circles)
-          ...List.generate(8, (index) {
-            final radius = size * 0.12 + (index * size * 0.07);
+          ...List.generate(10, (index) {
+            final radius = size * 0.15 + (index * size * 0.06);
             return Container(
               width: radius * 2,
               height: radius * 2,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: flavor.surface1.withValues(alpha: 0.5),
+                  color: flavor.surface1.withValues(alpha: 0.3),
                   width: 1,
                 ),
               ),
             );
           }),
-
-          // Center - Album art or placeholder (round)
           Container(
-            width: size * 0.4,
-            height: size * 0.4,
+            width: size * 0.42,
+            height: size * 0.42,
             decoration: BoxDecoration(
-              shape: BoxShape.circle, // Round center
+              shape: BoxShape.circle,
               color: flavor.mauve,
             ),
             child: ClipOval(
               child: widget.albumArt != null
-                  ? Image.memory(
-                      widget.albumArt,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) =>
-                          _buildPlaceholder(flavor, size),
-                    )
-                  : _buildPlaceholder(flavor, size),
+                  ? Image.memory(widget.albumArt, fit: BoxFit.cover)
+                  : Icon(
+                      Icons.music_note_rounded,
+                      color: flavor.crust,
+                      size: size * 0.15,
+                    ),
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildPlaceholder(Flavor flavor, double size) {
-    return Center(
-      child: Icon(
-        Icons.music_note_rounded,
-        color: flavor.crust,
-        size: size * 0.15,
       ),
     );
   }

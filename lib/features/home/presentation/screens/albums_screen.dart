@@ -3,7 +3,6 @@ import 'package:button_m3e/button_m3e.dart';
 import 'package:catppuccin_flutter/catppuccin_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:icon_button_m3e/icon_button_m3e.dart';
 
 import '../../../library/presentation/providers/library_provider.dart';
 import '../../../settings/presentation/providers/flavor_provider.dart';
@@ -11,7 +10,7 @@ import '../providers/albums_provider.dart';
 import '../widgets/album_card.dart';
 import '../widgets/album_filter_sheet.dart';
 
-/// Albums screen displaying albums in grid or list view.
+/// Pantalla de álbumes que muestra los álbumes en vista de cuadrícula o lista.
 class AlbumsScreen extends ConsumerStatefulWidget {
   const AlbumsScreen({super.key});
 
@@ -25,7 +24,7 @@ class _AlbumsScreenState extends ConsumerState<AlbumsScreen> {
   @override
   void initState() {
     super.initState();
-    // Load albums when screen initializes
+    // Cargar álbumes al inicializar la pantalla
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(albumsProvider.notifier).loadAlbums();
     });
@@ -42,7 +41,7 @@ class _AlbumsScreenState extends ConsumerState<AlbumsScreen> {
     final flavor = ref.watch(flavorProvider);
     final albumsState = ref.watch(albumsProvider);
 
-    // Watch library changes to reload albums
+    // Escuchar cambios en la biblioteca para recargar
     ref.listen(libraryProvider, (previous, next) {
       if (previous?.tracks != next.tracks) {
         ref.read(albumsProvider.notifier).loadAlbums();
@@ -53,64 +52,21 @@ class _AlbumsScreenState extends ConsumerState<AlbumsScreen> {
       child: Column(
         children: [
           // =====================
-          // 1. HEADER WITH SEARCH
+          // 1. CABECERA CON BÚSQUEDA
           // =====================
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Title and actions row
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Álbumes',
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(
-                            color: flavor.text,
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                    // Action buttons row
-                    Row(
-                      children: [
-                        // Shuffle button
-                        IconButtonM3E(
-                          icon: Icon(
-                            Icons.shuffle_rounded,
-                            color: albumsState.isShuffleEnabled
-                                ? flavor.mauve
-                                : flavor.subtext1,
-                          ),
-                          variant: IconButtonM3EVariant.standard,
-                          onPressed: () {
-                            ref.read(albumsProvider.notifier).toggleShuffle();
-                          },
-                          tooltip: 'Aleatorio',
-                        ),
-                        // View mode toggle
-                        IconButtonM3E(
-                          icon: Icon(
-                            albumsState.viewMode == AlbumViewMode.grid
-                                ? Icons.view_list_rounded
-                                : Icons.grid_view_rounded,
-                            color: flavor.subtext1,
-                          ),
-                          variant: IconButtonM3EVariant.standard,
-                          onPressed: () {
-                            ref.read(albumsProvider.notifier).toggleViewMode();
-                          },
-                          tooltip: albumsState.viewMode == AlbumViewMode.grid
-                              ? 'Ver como lista'
-                              : 'Ver como cuadrícula',
-                        ),
-                      ],
-                    ),
-                  ],
+                Text(
+                  'Álbumes',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    color: flavor.text,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 16),
-                // Search bar (same as HomeContentScreen)
                 TextField(
                   controller: _searchController,
                   onChanged: (value) {
@@ -155,17 +111,16 @@ class _AlbumsScreenState extends ConsumerState<AlbumsScreen> {
           ),
 
           // =====================
-          // 2. FILTER AND SORT BAR
+          // 2. BARRA DE FILTRO Y GRUPO DE BOTONES (CONNECTED)
           // =====================
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Filter button (text button)
+                // Botón de Filtro
                 TextButton.icon(
-                  onPressed: () {
-                    showAlbumFilterSheet(context);
-                  },
+                  onPressed: () => showAlbumFilterSheet(context),
                   icon: Icon(
                     Icons.filter_list_rounded,
                     color: flavor.mauve,
@@ -186,11 +141,21 @@ class _AlbumsScreenState extends ConsumerState<AlbumsScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
-                // Shuffle and View toggle with ButtonGroupM3E
+
+                // ButtonGroupM3E en variante CONNECTED
+                // Este diseño reemplaza al antiguo Segmented Button
                 ButtonGroupM3E(
+                  type: ButtonGroupM3EType.connected,
+                  shape: ButtonGroupM3EShape.round,
+                  size: ButtonGroupM3ESize.sm,
+                  // IMPORTANTE: Activamos selection para forzar bordes rectos internos
+                  selection: true,
+                  // Usamos un estilo uniforme para que el borde sea continuo
+                  style: ButtonM3EStyle.tonal,
                   actions: [
                     ButtonGroupM3EAction(
+                      // En lugar de SizedBox.shrink, usamos un widget transparente
+                      // o vacío para minimizar el desplazamiento
                       label: const SizedBox.shrink(),
                       icon: Icon(
                         Icons.shuffle_rounded,
@@ -199,9 +164,8 @@ class _AlbumsScreenState extends ConsumerState<AlbumsScreen> {
                             ? flavor.mauve
                             : flavor.subtext1,
                       ),
-                      style: albumsState.isShuffleEnabled
-                          ? ButtonM3EStyle.filled
-                          : ButtonM3EStyle.outlined,
+                      // El estado se refleja en el color del icono, no en el estilo del botón
+                      selected: albumsState.isShuffleEnabled,
                       onPressed: () {
                         ref.read(albumsProvider.notifier).toggleShuffle();
                       },
@@ -213,28 +177,20 @@ class _AlbumsScreenState extends ConsumerState<AlbumsScreen> {
                             ? Icons.view_list_rounded
                             : Icons.grid_view_rounded,
                         size: 18,
-                        color: albumsState.viewMode == AlbumViewMode.grid
-                            ? flavor.mauve
-                            : flavor.subtext1,
+                        color: flavor.subtext1,
                       ),
-                      style: albumsState.viewMode == AlbumViewMode.grid
-                          ? ButtonM3EStyle.filled
-                          : ButtonM3EStyle.outlined,
                       onPressed: () {
                         ref.read(albumsProvider.notifier).toggleViewMode();
                       },
                     ),
                   ],
-                  type: ButtonGroupM3EType.connected,
-                  shape: ButtonGroupM3EShape.round,
-                  size: ButtonGroupM3ESize.sm,
                 ),
               ],
             ),
           ),
 
           // =====================
-          // 3. ALBUMS GRID/LIST
+          // 3. CUADRÍCULA/LISTA DE ÁLBUMES
           // =====================
           Expanded(
             child: albumsState.isLoading
@@ -306,7 +262,7 @@ class _AlbumsScreenState extends ConsumerState<AlbumsScreen> {
           album: album,
           flavor: flavor,
           onTap: () {
-            // TODO: Navigate to album detail
+            // TODO: Navegar al detalle del álbum
           },
         );
       },
@@ -323,7 +279,7 @@ class _AlbumsScreenState extends ConsumerState<AlbumsScreen> {
           album: album,
           flavor: flavor,
           onTap: () {
-            // TODO: Navigate to album detail
+            // TODO: Navegar al detalle del álbum
           },
         );
       },
