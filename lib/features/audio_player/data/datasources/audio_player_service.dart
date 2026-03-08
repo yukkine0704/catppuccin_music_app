@@ -36,6 +36,18 @@ class AudioPlayerService extends BaseAudioHandler
     // Broadcast player state changes
     _player.playbackEventStream.listen(_broadcastState);
 
+    // Also listen to position stream for continuous updates (throttled to ~200ms)
+    _player.positionStream
+        .throttleTime(
+          const Duration(milliseconds: 200),
+          trailing: true,
+          leading: false,
+        )
+        .listen((_) {
+          debugPrint('[AudioPlayerService] Position stream tick');
+          _emitCurrentPlaybackState();
+        });
+
     // Listen to current track index changes
     _player.currentIndexStream.listen((index) {
       if (index != null && index < _tracks.length) {
@@ -293,6 +305,46 @@ class AudioPlayerService extends BaseAudioHandler
     );
     debugPrint(
       '[AudioPlayerService] PlaybackState broadcasted - isPlaying: $playing',
+    );
+  }
+
+  /// Emits current playback state without requiring a PlaybackEvent.
+  /// Used for continuous position updates from positionStream.
+  void _emitCurrentPlaybackState() {
+    final playing = _player.playing;
+    final position = _player.position;
+    final duration = _player.duration ?? Duration.zero;
+
+    debugPrint(
+      '[AudioPlayerService] _emitCurrentPlaybackState - playing: $playing, position: $position, duration: $duration',
+    );
+
+    _playbackState.add(
+      PlaybackState(
+        controls: [
+          MediaControl.skipToPrevious,
+          if (playing) MediaControl.pause else MediaControl.play,
+          MediaControl.skipToNext,
+        ],
+        systemActions: const {
+          MediaAction.seek,
+          MediaAction.seekForward,
+          MediaAction.seekBackward,
+        },
+        androidCompactActionIndices: const [0, 1, 2],
+        processingState: const {
+          ProcessingState.idle: AudioProcessingState.idle,
+          ProcessingState.loading: AudioProcessingState.loading,
+          ProcessingState.buffering: AudioProcessingState.buffering,
+          ProcessingState.ready: AudioProcessingState.ready,
+          ProcessingState.completed: AudioProcessingState.completed,
+        }[_player.processingState]!,
+        playing: playing,
+        updatePosition: position,
+        bufferedPosition: _player.bufferedPosition,
+        speed: _player.speed,
+        queueIndex: _player.currentIndex ?? 0,
+      ),
     );
   }
 
