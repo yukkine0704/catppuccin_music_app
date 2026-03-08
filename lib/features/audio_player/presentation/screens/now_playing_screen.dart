@@ -281,57 +281,45 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen> {
 
         const SizedBox(height: 32),
 
-        // Fila Secundaria: Grupo "Connected" dentro de un overlay tipo píldora
-        Container(
-          decoration: BoxDecoration(
-            color: flavor.surface1, // Color de fondo de la píldora
-            borderRadius: BorderRadius.circular(50), // Totalmente redondeado
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-          child: ButtonGroupM3E(
-            type: ButtonGroupM3EType.connected,
-            shape: ButtonGroupM3EShape.round,
-            size: ButtonGroupM3ESize.sm,
-            style: ButtonM3EStyle
-                .text, // Text style usa el fondo del contenedor transparente
-            showDividers: true,
-            dividerColor: flavor.surface2,
-            dividerThickness: 1.5,
-            actions: [
-              // Pasamos el Icon en 'label' y 'icon: null' para arreglar el centrado del ripple
-              ButtonGroupM3EAction(
-                label: Icon(
-                  Icons.shuffle_rounded,
-                  color: _isShuffleEnabled ? flavor.mauve : flavor.subtext1,
-                  size: 22,
-                ),
-                icon: null,
-                onPressed: () =>
-                    setState(() => _isShuffleEnabled = !_isShuffleEnabled),
+        // Fila Secundaria: ButtonGroupM3E estilo pill
+        ButtonGroupM3E(
+          type: ButtonGroupM3EType.connected,
+          shape: ButtonGroupM3EShape.round,
+          size: ButtonGroupM3ESize.sm,
+          selection: true,
+          style: ButtonM3EStyle.tonal,
+          actions: [
+            ButtonGroupM3EAction(
+              label: Icon(
+                Icons.shuffle_rounded,
+                size: 22,
+                color: _isShuffleEnabled ? flavor.mauve : flavor.subtext1,
               ),
-              ButtonGroupM3EAction(
-                label: Icon(
-                  _repeatMode == 2
-                      ? Icons.repeat_one_rounded
-                      : Icons.repeat_rounded,
-                  color: _repeatMode > 0 ? flavor.mauve : flavor.subtext1,
-                  size: 22,
-                ),
-                icon: null,
-                onPressed: () =>
-                    setState(() => _repeatMode = (_repeatMode + 1) % 3),
+              selected: _isShuffleEnabled,
+              onPressed: () =>
+                  setState(() => _isShuffleEnabled = !_isShuffleEnabled),
+            ),
+            ButtonGroupM3EAction(
+              label: Icon(
+                _repeatMode == 2
+                    ? Icons.repeat_one_rounded
+                    : Icons.repeat_rounded,
+                size: 22,
+                color: _repeatMode > 0 ? flavor.mauve : flavor.subtext1,
               ),
-              ButtonGroupM3EAction(
-                label: Icon(
-                  Icons.lyrics_rounded,
-                  color: flavor.subtext1,
-                  size: 22,
-                ),
-                icon: null,
-                onPressed: () {},
+              selected: _repeatMode > 0,
+              onPressed: () =>
+                  setState(() => _repeatMode = (_repeatMode + 1) % 3),
+            ),
+            ButtonGroupM3EAction(
+              label: Icon(
+                Icons.lyrics_rounded,
+                size: 22,
+                color: flavor.subtext1,
               ),
-            ],
-          ),
+              onPressed: () {},
+            ),
+          ],
         ),
       ],
     );

@@ -1,12 +1,12 @@
 import 'dart:math' as math;
 
+import 'package:button_group_m3e/button_group_m3e.dart';
 import 'package:button_m3e/button_m3e.dart';
 import 'package:catppuccin_flutter/catppuccin_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:icon_button_m3e/icon_button_m3e.dart';
-import 'package:progress_indicator_m3e/progress_indicator_m3e.dart';
 
 import '../../../settings/presentation/providers/flavor_provider.dart';
 import '../providers/audio_player_provider.dart';
@@ -39,7 +39,7 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
   // State for UI toggles
   bool _isFavorite = false;
   bool _isShuffleEnabled = false;
-  bool _isRepeatEnabled = false;
+  int _repeatMode = 0; // 0: off, 1: all, 2: one
 
   @override
   void initState() {
@@ -276,7 +276,7 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           IconButtonM3E(
-            variant: IconButtonM3EVariant.standard,
+            variant: IconButtonM3EVariant.tonal,
             size: IconButtonM3ESize.md,
             icon: Icon(Icons.keyboard_arrow_down_rounded, color: flavor.text),
             onPressed: () {
@@ -301,7 +301,7 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
             ),
           ),
           IconButtonM3E(
-            variant: IconButtonM3EVariant.standard,
+            variant: IconButtonM3EVariant.tonal,
             size: IconButtonM3ESize.md,
             icon: Icon(Icons.queue_music_rounded, color: flavor.text),
             onPressed: () {},
@@ -380,15 +380,26 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
 
     return Column(
       children: [
-        Container(
-          height: _lerp(3, 6, value),
-          decoration: BoxDecoration(
-            color: flavor.surface2,
-            borderRadius: BorderRadius.circular(_lerp(1.5, 3, value)),
+        SliderTheme(
+          data: SliderThemeData(
+            trackHeight: 4,
+            activeTrackColor: flavor.mauve,
+            inactiveTrackColor: flavor.surface1,
+            thumbColor: flavor.mauve,
+            overlayColor: flavor.mauve.withValues(alpha: 0.1),
+            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
+            trackShape: const RoundedRectSliderTrackShape(),
           ),
-          child: LinearProgressIndicatorM3E(value: progress),
+          child: Slider(
+            value: progress,
+            onChanged: (newValue) {
+              final seekTo = Duration(
+                milliseconds: (newValue * duration.inMilliseconds).toInt(),
+              );
+              ref.read(audioPlayerProvider.notifier).seek(seekTo);
+            },
+          ),
         ),
-        const SizedBox(height: 8),
         Padding(
           padding: EdgeInsets.symmetric(horizontal: 4 * value),
           child: Row(
@@ -418,94 +429,88 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            ButtonM3E(
-              onPressed: () => notifier.skipToPrevious(),
+            IconButtonM3E(
+              variant: IconButtonM3EVariant.standard,
+              size: IconButtonM3ESize.lg,
               icon: Icon(
                 Icons.skip_previous_rounded,
                 color: flavor.text,
                 size: _lerp(28, 36, value),
               ),
-              label: const SizedBox.shrink(),
-              style: ButtonM3EStyle.text,
-              size: ButtonM3ESize.md,
+              onPressed: () => notifier.skipToPrevious(),
             ),
-            ButtonM3E(
-              onPressed: () => notifier.togglePlayPause(),
+            IconButtonM3E(
+              variant: IconButtonM3EVariant.filled,
+              size: IconButtonM3ESize.lg,
               icon: Icon(
                 state.isPlaying
                     ? Icons.pause_rounded
                     : Icons.play_arrow_rounded,
-                color: flavor.crust,
                 size: _lerp(32, 40, value),
+                color: flavor.base,
               ),
-              label: const SizedBox.shrink(),
-              style: ButtonM3EStyle.filled,
-              size: ButtonM3ESize.lg,
+              onPressed: () => notifier.togglePlayPause(),
             ),
-            ButtonM3E(
-              onPressed: () => notifier.skipToNext(),
+            IconButtonM3E(
+              variant: IconButtonM3EVariant.standard,
+              size: IconButtonM3ESize.lg,
               icon: Icon(
                 Icons.skip_next_rounded,
                 color: flavor.text,
                 size: _lerp(28, 36, value),
               ),
-              label: const SizedBox.shrink(),
-              style: ButtonM3EStyle.text,
-              size: ButtonM3ESize.md,
+              onPressed: () => notifier.skipToNext(),
             ),
           ],
         ),
-        SizedBox(height: 16 + (value * 8)),
-        // Secondary row
+
+        const SizedBox(height: 32),
+
+        // Secondary row - ButtonGroupM3E in pill container
         Opacity(
           opacity: value,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              IconButtonM3E(
-                variant: IconButtonM3EVariant.standard,
-                size: IconButtonM3ESize.md,
-                icon: Icon(
+          child: ButtonGroupM3E(
+            type: ButtonGroupM3EType.connected,
+            shape: ButtonGroupM3EShape.round,
+            size: ButtonGroupM3ESize.sm,
+            selection: true,
+            style: ButtonM3EStyle.tonal,
+            actions: [
+              ButtonGroupM3EAction(
+                label: Icon(
                   Icons.shuffle_rounded,
+                  size: 22,
                   color: _isShuffleEnabled ? flavor.mauve : flavor.subtext1,
-                  size: 24,
                 ),
-                selectedIcon: Icon(Icons.shuffle_rounded, color: flavor.mauve),
-                isSelected: _isShuffleEnabled,
+                selected: _isShuffleEnabled,
                 onPressed: () {
                   setState(() {
                     _isShuffleEnabled = !_isShuffleEnabled;
                   });
                 },
-                tooltip: 'Shuffle',
               ),
-              IconButtonM3E(
-                variant: IconButtonM3EVariant.standard,
-                size: IconButtonM3ESize.md,
-                icon: Icon(
-                  Icons.repeat_rounded,
-                  color: _isRepeatEnabled ? flavor.mauve : flavor.subtext1,
-                  size: 24,
+              ButtonGroupM3EAction(
+                label: Icon(
+                  _repeatMode == 2
+                      ? Icons.repeat_one_rounded
+                      : Icons.repeat_rounded,
+                  size: 22,
+                  color: _repeatMode > 0 ? flavor.mauve : flavor.subtext1,
                 ),
-                selectedIcon: Icon(Icons.repeat_rounded, color: flavor.mauve),
-                isSelected: _isRepeatEnabled,
+                selected: _repeatMode > 0,
                 onPressed: () {
                   setState(() {
-                    _isRepeatEnabled = !_isRepeatEnabled;
+                    _repeatMode = (_repeatMode + 1) % 3;
                   });
                 },
-                tooltip: 'Repeat',
               ),
-              IconButtonM3E(
-                variant: IconButtonM3EVariant.standard,
-                size: IconButtonM3ESize.md,
-                icon: Icon(
+              ButtonGroupM3EAction(
+                label: Icon(
                   Icons.lyrics_rounded,
+                  size: 22,
                   color: flavor.subtext1,
-                  size: 24,
                 ),
                 onPressed: () {},
-                tooltip: 'Lyrics',
               ),
             ],
           ),
@@ -695,10 +700,9 @@ class _VinylAnimationWidgetState extends State<_VinylAnimationWidget>
             color: flavor.surface0,
             boxShadow: [
               BoxShadow(
-                color: flavor.crust.withValues(alpha: 0.3),
-                blurRadius: 30,
-                spreadRadius: 5,
-                offset: const Offset(0, 10),
+                color: flavor.crust.withValues(alpha: 0.4),
+                blurRadius: 40,
+                offset: const Offset(0, 15),
               ),
             ],
           ),
@@ -706,15 +710,15 @@ class _VinylAnimationWidgetState extends State<_VinylAnimationWidget>
             alignment: Alignment.center,
             children: [
               // Vinyl grooves (concentric circles)
-              ...List.generate(8, (index) {
-                final radius = size * 0.12 + (index * size * 0.07);
+              ...List.generate(10, (index) {
+                final radius = size * 0.15 + (index * size * 0.06);
                 return Container(
                   width: radius * 2,
                   height: radius * 2,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: flavor.surface1.withValues(alpha: 0.5),
+                      color: flavor.surface1.withValues(alpha: 0.3),
                       width: 1,
                     ),
                   ),
@@ -723,8 +727,8 @@ class _VinylAnimationWidgetState extends State<_VinylAnimationWidget>
 
               // Center - Album art or placeholder (round)
               Container(
-                width: size * 0.4,
-                height: size * 0.4,
+                width: size * 0.42,
+                height: size * 0.42,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: flavor.mauve,
