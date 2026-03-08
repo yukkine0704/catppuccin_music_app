@@ -8,6 +8,7 @@ import 'core/di/injection_container.dart';
 import 'core/theme/catppuccin_theme.dart';
 import 'features/audio_player/data/datasources/audio_player_service.dart';
 import 'features/home/presentation/screens/home_screen.dart';
+import 'features/settings/presentation/providers/flavor_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -56,16 +57,20 @@ void main() async {
 }
 
 /// Main application widget.
-class TheVinylSanctuaryApp extends StatelessWidget {
+class TheVinylSanctuaryApp extends ConsumerWidget {
   const TheVinylSanctuaryApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Watch the flavor provider to rebuild theme when it changes
+    final flavor = ref.watch(flavorProvider);
+    final theme = CatppuccinTheme.buildTheme(flavor);
+
     return MaterialApp(
       title: 'The Vinyl Sanctuary',
       debugShowCheckedModeBanner: false,
-      theme: CatppuccinTheme.mochaTheme,
-      darkTheme: CatppuccinTheme.mochaTheme,
+      theme: theme,
+      darkTheme: theme,
       themeMode: ThemeMode.dark,
       home: const HomeScreen(),
     );

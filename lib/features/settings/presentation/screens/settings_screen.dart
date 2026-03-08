@@ -1,17 +1,21 @@
-import 'package:catppuccin_flutter/catppuccin_flutter.dart';
+import 'package:catppuccin_flutter/catppuccin_flutter.dart'
+    show Flavor, catppuccin;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:m3e_collection/m3e_collection.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../providers/flavor_provider.dart';
+
 /// Settings screen for app configuration.
-class SettingsScreen extends StatefulWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
   @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> {
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _darkMode = true;
   double _playbackSpeed = 1.0;
 
@@ -47,7 +51,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final flavor = catppuccin.mocha;
+    // Watch the flavor provider to rebuild when theme changes globally
+    final flavor = ref.watch(flavorProvider);
 
     return Scaffold(
       backgroundColor: flavor.base,
@@ -61,6 +66,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
         children: [
           // Appearance section
           _buildSectionHeader('Apariencia', flavor),
+          _buildSettingsTile(
+            title: 'Sabor de Catppuccin',
+            subtitle: _getFlavorName(flavor),
+            trailing: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: flavor.surface1,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: DropdownButton<Flavor>(
+                value: flavor,
+                dropdownColor: flavor.surface1,
+                underline: const SizedBox(),
+                icon: Icon(Icons.arrow_drop_down, color: flavor.text),
+                style: TextStyle(color: flavor.text, fontSize: 14),
+                items: [
+                  DropdownMenuItem(
+                    value: catppuccin.mocha,
+                    child: Text('Mocha', style: TextStyle(color: flavor.text)),
+                  ),
+                  DropdownMenuItem(
+                    value: catppuccin.latte,
+                    child: Text('Latte', style: TextStyle(color: flavor.text)),
+                  ),
+                  DropdownMenuItem(
+                    value: catppuccin.frappe,
+                    child: Text('Frappé', style: TextStyle(color: flavor.text)),
+                  ),
+                  DropdownMenuItem(
+                    value: catppuccin.macchiato,
+                    child: Text(
+                      'Macchiato',
+                      style: TextStyle(color: flavor.text),
+                    ),
+                  ),
+                ],
+                onChanged: (value) {
+                  if (value != null) {
+                    ref.read(flavorProvider.notifier).setFlavor(value);
+                  }
+                },
+              ),
+            ),
+            flavor: flavor,
+          ),
           _buildSettingsTile(
             title: 'Modo Oscuro',
             subtitle: 'Usar tema oscuro de Catppuccin',
@@ -113,6 +163,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
       ),
     );
+  }
+
+  String _getFlavorName(Flavor flavor) {
+    if (flavor == catppuccin.latte) return 'Latte';
+    if (flavor == catppuccin.frappe) return 'Frappé';
+    if (flavor == catppuccin.macchiato) return 'Macchiato';
+    return 'Mocha';
   }
 
   Widget _buildSectionHeader(String title, Flavor flavor) {

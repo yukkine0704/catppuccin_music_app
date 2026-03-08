@@ -20,6 +20,7 @@ class CatppuccinTheme {
   }
 
   /// Builds a complete ThemeData mapping Catppuccin colors to M3 fields.
+  /// This is a private method used by the flavor-specific theme getters.
   static ThemeData _buildTheme(Flavor flavor) {
     final colorScheme = _buildColorScheme(flavor);
 
@@ -95,6 +96,12 @@ class CatppuccinTheme {
       dividerTheme: DividerThemeData(color: flavor.surface0, thickness: 1),
       fontFamily: GoogleFonts.lexend().fontFamily,
     );
+  }
+
+  /// Public method to build a ThemeData from any Flavor.
+  /// Use this when you need to dynamically switch between flavors.
+  static ThemeData buildTheme(Flavor flavor) {
+    return _buildTheme(flavor);
   }
 
   /// Maps Catppuccin colors to Material 3 ColorScheme fields.
