@@ -2,7 +2,6 @@ import 'package:catppuccin_flutter/catppuccin_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:icon_button_m3e/icon_button_m3e.dart';
-import 'package:progress_indicator_m3e/progress_indicator_m3e.dart';
 
 import '../providers/audio_player_provider.dart';
 
@@ -38,115 +37,119 @@ class MiniPlayer extends ConsumerWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 64,
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: flavor.surface0,
-          border: Border(
-            top: BorderSide(
-              color: flavor.surface1.withValues(alpha: 0.5),
-              width: 1,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: flavor.crust.withValues(alpha: 0.2),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
-          ),
+          ],
         ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             // Progress bar
-            SizedBox(
-              height: 2,
-              child: LinearProgressIndicatorM3E(
-                value: progress,
-              ),
-            ),
             // Content row
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Row(
-                  children: [
-                    // Album art thumbnail
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: flavor.mauve,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: playerState.currentTrack?.albumArtBytes != null
-                            ? Image.memory(
-                                playerState.currentTrack!.albumArtBytes!,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    _buildPlaceholder(flavor),
-                              )
-                            : _buildPlaceholder(flavor),
-                      ),
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  // Album art thumbnail
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: flavor.mauve,
+                      borderRadius: BorderRadius.circular(24),
                     ),
-                    const SizedBox(width: 12),
-                    // Track info
-                    Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            playerState.currentTrack?.title ??
-                                'No hay canción',
-                            style: TextStyle(
-                              color: flavor.text,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(24),
+                      child: playerState.currentTrack?.albumArtBytes != null
+                          ? Image.memory(
+                              playerState.currentTrack!.albumArtBytes!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  _buildPlaceholder(flavor),
+                            )
+                          : _buildPlaceholder(flavor),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Track info
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          playerState.currentTrack?.title ?? 'No hay canción',
+                          style: TextStyle(
+                            color: flavor.text,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            playerState.currentTrack?.artist ??
-                                'Unknown Artist',
-                            style: TextStyle(
-                              color: flavor.subtext1,
-                              fontSize: 12,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          playerState.currentTrack?.artist ?? 'Unknown Artist',
+                          style: TextStyle(
+                            color: flavor.subtext1,
+                            fontSize: 12,
                           ),
-                        ],
-                      ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ),
-                    // Play/Pause button
-                    IconButtonM3E(
-                      variant: IconButtonM3EVariant.standard,
-                      size: IconButtonM3ESize.md,
-                      icon: Icon(
-                        playerState.isPlaying
-                            ? Icons.pause_rounded
-                            : Icons.play_arrow_rounded,
-                        color: flavor.text,
-                      ),
-                      onPressed: () {
-                        ref
-                            .read(audioPlayerProvider.notifier)
-                            .togglePlayPause();
-                      },
-                      tooltip: playerState.isPlaying ? 'Pausar' : 'Reproducir',
+                  ),
+                  const SizedBox(width: 8),
+                  // Control buttons with rounded backgrounds
+                  // Skip previous button
+                  IconButtonM3E(
+                    variant: IconButtonM3EVariant.tonal,
+                    size: IconButtonM3ESize.sm,
+                    icon: Icon(
+                      Icons.skip_previous_rounded,
+                      color: flavor.crust,
                     ),
-                    // Next button
-                    IconButtonM3E(
-                      variant: IconButtonM3EVariant.standard,
-                      size: IconButtonM3ESize.md,
-                      icon: Icon(
-                        Icons.skip_next_rounded,
-                        color: flavor.text,
-                      ),
-                      onPressed: () {
-                        ref.read(audioPlayerProvider.notifier).skipToNext();
-                      },
-                      tooltip: 'Siguiente',
+                    onPressed: () {
+                      ref.read(audioPlayerProvider.notifier).skipToPrevious();
+                    },
+                    tooltip: 'Anterior',
+                  ),
+                  // Play/Pause button
+                  IconButtonM3E(
+                    variant: IconButtonM3EVariant.filled,
+                    size: IconButtonM3ESize.sm,
+                    icon: Icon(
+                      playerState.isPlaying
+                          ? Icons.pause_rounded
+                          : Icons.play_arrow_rounded,
+                      color: flavor.crust,
                     ),
-                  ],
-                ),
+                    onPressed: () {
+                      ref.read(audioPlayerProvider.notifier).togglePlayPause();
+                    },
+                    tooltip: playerState.isPlaying ? 'Pausar' : 'Reproducir',
+                  ),
+                  // Skip next button
+                  IconButtonM3E(
+                    variant: IconButtonM3EVariant.tonal,
+                    size: IconButtonM3ESize.sm,
+                    icon: Icon(Icons.skip_next_rounded, color: flavor.crust),
+                    onPressed: () {
+                      ref.read(audioPlayerProvider.notifier).skipToNext();
+                    },
+                    tooltip: 'Siguiente',
+                  ),
+                ],
               ),
             ),
           ],
