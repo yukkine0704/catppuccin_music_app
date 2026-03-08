@@ -13,6 +13,7 @@ class Track {
   final int? trackNumber;
   final int? year;
   final DateTime? dateAdded;
+  final String? genre;
 
   const Track({
     required this.id,
@@ -26,6 +27,7 @@ class Track {
     this.trackNumber,
     this.year,
     this.dateAdded,
+    this.genre,
   });
 
   /// Returns true if the track has embedded album art.
@@ -44,6 +46,7 @@ class Track {
     int? trackNumber,
     int? year,
     DateTime? dateAdded,
+    String? genre,
   }) {
     return Track(
       id: id ?? this.id,
@@ -57,6 +60,7 @@ class Track {
       trackNumber: trackNumber ?? this.trackNumber,
       year: year ?? this.year,
       dateAdded: dateAdded ?? this.dateAdded,
+      genre: genre ?? this.genre,
     );
   }
 

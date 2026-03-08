@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:icon_button_m3e/icon_button_m3e.dart';
 
 import '../../../settings/presentation/providers/flavor_provider.dart';
+import '../providers/album_accent_provider.dart';
 import '../providers/audio_player_provider.dart';
 import '../providers/player_animation_provider.dart';
 import 'queue_bottom_sheet.dart';
@@ -373,6 +374,11 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
   }
 
   Widget _buildProgressSection(PlayerState state, Flavor flavor, double value) {
+    final accentState = ref.watch(albumAccentProvider);
+    final accentColor = accentState.useAlbumColors || accentState.useGenreColors
+        ? accentState.accentColor
+        : flavor.mauve;
+
     final position = state.position;
     final duration = state.duration.inMilliseconds > 0
         ? state.duration
@@ -387,10 +393,10 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
         SliderTheme(
           data: SliderThemeData(
             trackHeight: 4,
-            activeTrackColor: flavor.mauve,
+            activeTrackColor: accentColor,
             inactiveTrackColor: flavor.surface1,
-            thumbColor: flavor.mauve,
-            overlayColor: flavor.mauve.withValues(alpha: 0.1),
+            thumbColor: accentColor,
+            overlayColor: accentColor.withValues(alpha: 0.1),
             thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
             trackShape: const RoundedRectSliderTrackShape(),
           ),
