@@ -1,4 +1,5 @@
 import 'package:audio_service/audio_service.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/di/injection_container.dart';
@@ -73,15 +74,29 @@ class AudioPlayerNotifier extends StateNotifier<PlayerState> {
   void _init() {
     // Listen to playback state changes
     _audioHandler.playbackState.listen((playbackState) {
+      debugPrint(
+        '[AudioPlayerNotifier] playbackState received - playing: ${playbackState.playing}, position: ${playbackState.updatePosition}',
+      );
       state = state.copyWith(
         isPlaying: playbackState.playing,
         position: playbackState.updatePosition,
       );
     });
 
-    // Also listen to the service for queue and current track changes
+    // Also listen to duration changes from the player
     final service = _audioHandler as AudioPlayerService;
+    service.durationStream.listen((duration) {
+      debugPrint('[AudioPlayerNotifier] duration received: $duration');
+      if (duration != null) {
+        state = state.copyWith(duration: duration);
+      }
+    });
+
+    // Also listen to the service for queue and current track changes
     service.currentTrackStream.listen((track) {
+      debugPrint(
+        '[AudioPlayerNotifier] currentTrack received: ${track?.title}',
+      );
       state = state.copyWith(
         currentTrack: track,
         queue: service.trackQueue,
@@ -129,16 +144,21 @@ class AudioPlayerNotifier extends StateNotifier<PlayerState> {
 
   /// Pauses playback.
   Future<void> pause() async {
+    debugPrint('[AudioPlayerNotifier] pause() called');
     await _audioHandler.pause();
   }
 
   /// Resumes playback.
   Future<void> resume() async {
+    debugPrint('[AudioPlayerNotifier] resume() called');
     await _audioHandler.play();
   }
 
   /// Toggles play/pause.
   Future<void> togglePlayPause() async {
+    debugPrint(
+      '[AudioPlayerNotifier] togglePlayPause() - current isPlaying: ${state.isPlaying}',
+    );
     if (state.isPlaying) {
       await pause();
     } else {
@@ -148,6 +168,7 @@ class AudioPlayerNotifier extends StateNotifier<PlayerState> {
 
   /// Seeks to a position.
   Future<void> seek(Duration position) async {
+    debugPrint('[AudioPlayerNotifier] seek() called to position: $position');
     await _audioHandler.seek(position);
   }
 

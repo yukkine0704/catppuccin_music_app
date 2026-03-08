@@ -1,4 +1,5 @@
 import 'package:audio_service/audio_service.dart';
+import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:rxdart/rxdart.dart';
 
@@ -64,6 +65,10 @@ class AudioPlayerService extends BaseAudioHandler
   Future<void> playTracks(List<Track> tracks, {int startIndex = 0}) async {
     if (tracks.isEmpty) return;
 
+    debugPrint(
+      '[AudioPlayerService] playTracks() called with ${tracks.length} tracks, startIndex: $startIndex',
+    );
+
     _tracks.clear();
     _tracks.addAll(tracks);
     _currentIndex = startIndex;
@@ -92,7 +97,9 @@ class AudioPlayerService extends BaseAudioHandler
     _trackSubject.add(tracks[startIndex]);
     _updateMediaItem(tracks[startIndex]);
 
+    debugPrint('[AudioPlayerService] Calling _player.play()');
     await _player.play();
+    debugPrint('[AudioPlayerService] Playback started successfully');
   }
 
   /// Plays a single track.
@@ -103,11 +110,20 @@ class AudioPlayerService extends BaseAudioHandler
   /// Pauses playback.
   @override
   Future<void> pause() async {
+    debugPrint('[AudioPlayerService] pause() called');
     await _player.pause();
   }
 
   /// Resumes playback.
   Future<void> resume() async {
+    debugPrint('[AudioPlayerService] resume() called');
+    await _player.play();
+  }
+
+  /// Plays/Resumes playback (required override for BaseAudioHandler).
+  @override
+  Future<void> play() async {
+    debugPrint('[AudioPlayerService] play() called');
     await _player.play();
   }
 
@@ -241,6 +257,13 @@ class AudioPlayerService extends BaseAudioHandler
 
   void _broadcastState(PlaybackEvent event) {
     final playing = _player.playing;
+    final position = _player.position;
+    final duration = _player.duration ?? Duration.zero;
+
+    debugPrint(
+      '[AudioPlayerService] _broadcastState - playing: $playing, position: $position, duration: $duration',
+    );
+
     _playbackState.add(
       PlaybackState(
         controls: [
@@ -262,11 +285,14 @@ class AudioPlayerService extends BaseAudioHandler
           ProcessingState.completed: AudioProcessingState.completed,
         }[_player.processingState]!,
         playing: playing,
-        updatePosition: _player.position,
+        updatePosition: position,
         bufferedPosition: _player.bufferedPosition,
         speed: _player.speed,
         queueIndex: _player.currentIndex ?? 0,
       ),
+    );
+    debugPrint(
+      '[AudioPlayerService] PlaybackState broadcasted - isPlaying: $playing',
     );
   }
 
