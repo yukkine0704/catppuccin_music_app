@@ -59,6 +59,8 @@ class AudioPlayerService extends BaseAudioHandler
   }
 
   void _updateMediaItem(Track track) {
+    // Artwork is now loaded separately via AlbumArtWidget using albumId.
+    // The audio_service background notification will show default icon.
     mediaItem.add(
       MediaItem(
         id: track.id.toString(),
@@ -66,9 +68,7 @@ class AudioPlayerService extends BaseAudioHandler
         artist: track.artist,
         album: track.album,
         duration: Duration(milliseconds: track.duration),
-        artUri: track.albumArtPath != null
-            ? Uri.file(track.albumArtPath!)
-            : null,
+        artUri: null, // Artwork loaded separately via AlbumArtWidget
       ),
     );
   }

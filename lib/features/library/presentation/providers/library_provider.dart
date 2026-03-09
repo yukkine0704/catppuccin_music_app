@@ -14,18 +14,36 @@ class LibraryState {
   final List<Track> tracks;
   final bool isLoading;
   final String? error;
+  final int totalFiles;
+  final int processedFiles;
 
   const LibraryState({
     this.tracks = const [],
     this.isLoading = false,
     this.error,
+    this.totalFiles = 0,
+    this.processedFiles = 0,
   });
 
-  LibraryState copyWith({List<Track>? tracks, bool? isLoading, String? error}) {
+  /// Progress percentage (0.0 to 1.0)
+  double get progress => totalFiles > 0 ? processedFiles / totalFiles : 0.0;
+
+  /// Whether scanning is in progress
+  bool get isScanning => isLoading && totalFiles > 0;
+
+  LibraryState copyWith({
+    List<Track>? tracks,
+    bool? isLoading,
+    String? error,
+    int? totalFiles,
+    int? processedFiles,
+  }) {
     return LibraryState(
       tracks: tracks ?? this.tracks,
       isLoading: isLoading ?? this.isLoading,
       error: error,
+      totalFiles: totalFiles ?? this.totalFiles,
+      processedFiles: processedFiles ?? this.processedFiles,
     );
   }
 }
@@ -38,13 +56,28 @@ class LibraryNotifier extends StateNotifier<LibraryState> {
 
   /// Loads all songs from local storage.
   Future<void> loadSongs() async {
-    state = state.copyWith(isLoading: true, error: null);
-    try {
-      final songs = await _datasource.getAllSongs();
-      state = state.copyWith(tracks: songs, isLoading: false);
-    } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
-    }
+    state = state.copyWith(
+      isLoading: true,
+      error: null,
+      totalFiles: 0,
+      processedFiles: 0,
+    );
+
+    final result = await _datasource.getAllSongs(
+      onProgress: (total, processed) {
+        // Update progress
+        state = state.copyWith(totalFiles: total, processedFiles: processed);
+      },
+    );
+
+    result.fold(
+      (failure) {
+        state = state.copyWith(isLoading: false, error: failure.message);
+      },
+      (tracks) {
+        state = state.copyWith(tracks: tracks, isLoading: false);
+      },
+    );
   }
 
   /// Refreshes the library.

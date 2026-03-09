@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:icon_button_m3e/icon_button_m3e.dart';
 
+import '../../../../shared/widgets/album_art_widget.dart';
 import '../../../audio_player/presentation/providers/audio_player_provider.dart';
 import '../../../library/domain/entities/track.dart';
 import '../../../library/presentation/providers/library_provider.dart';
@@ -153,7 +154,11 @@ class _HomeContentScreenState extends ConsumerState<HomeContentScreen> {
                               artist: track.artist,
                               cardColor: colorValue,
                               flavor: flavor,
-                              dateAdded: track.dateAdded,
+                              dateAdded: track.dateAdded != null
+                                  ? DateTime.fromMillisecondsSinceEpoch(
+                                      track.dateAdded! * 1000,
+                                    )
+                                  : null,
                               track: track,
                             );
                           },
@@ -667,23 +672,11 @@ class _TrackListTile extends ConsumerWidget {
 
   Widget _buildAlbumArt() {
     if (track.hasAlbumArt) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: track.albumArtBytes != null
-            ? Image.memory(
-                track.albumArtBytes!,
-                width: 48,
-                height: 48,
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => _buildPlaceholder(),
-              )
-            : Image.asset(
-                track.albumArtPath!,
-                width: 48,
-                height: 48,
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => _buildPlaceholder(),
-              ),
+      return AlbumArtWidget(
+        albumId: track.albumId,
+        size: 48,
+        borderRadius: 8,
+        placeholderIcon: Icons.music_note_rounded,
       );
     }
     return _buildPlaceholder();

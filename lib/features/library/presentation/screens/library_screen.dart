@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:m3e_collection/m3e_collection.dart';
 
+import '../../../../shared/widgets/album_art_widget.dart';
 import '../../../audio_player/presentation/providers/audio_player_provider.dart';
 import '../../../settings/presentation/providers/flavor_provider.dart';
 import '../../domain/entities/track.dart';
@@ -57,6 +58,35 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     List<Track> tracks,
     Flavor flavor,
   ) {
+    // Show progress indicator while scanning
+    if (state.isScanning) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              LoadingIndicatorM3E(
+                variant: LoadingIndicatorM3EVariant.contained,
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Escaneando música...',
+                style: TextStyle(color: flavor.text, fontSize: 16),
+              ),
+              const SizedBox(height: 16),
+              LinearProgressIndicatorM3E(value: state.progress),
+              const SizedBox(height: 8),
+              Text(
+                '${state.processedFiles} / ${state.totalFiles} archivos',
+                style: TextStyle(color: flavor.subtext1, fontSize: 14),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     if (state.isLoading && tracks.isEmpty) {
       return const Center(
         child: LoadingIndicatorM3E(
@@ -170,27 +200,12 @@ class _TrackListTile extends ConsumerWidget {
   }
 
   Widget _buildAlbumArt() {
-    if (track.hasAlbumArt) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: track.albumArtBytes != null
-            ? Image.memory(
-                track.albumArtBytes!,
-                width: 48,
-                height: 48,
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => _buildPlaceholder(),
-              )
-            : Image.asset(
-                track.albumArtPath!,
-                width: 48,
-                height: 48,
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => _buildPlaceholder(),
-              ),
-      );
-    }
-    return _buildPlaceholder();
+    return AlbumArtWidget(
+      albumId: track.albumId,
+      size: 48,
+      borderRadius: 8,
+      flavor: flavor,
+    );
   }
 
   Widget _buildPlaceholder() {

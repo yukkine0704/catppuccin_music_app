@@ -20,6 +20,7 @@ dependencies:
   connectivity_plus: ^7.0.0
   permission_handler: ^12.0.1 # Crucial para leer archivos locales
   dartz: ^0.10.1         # Para Either<Failure, Success>
+  equatable: ^2.0.5
 
   # --- UI & Diseño (M3E + Catppuccin) ---
   catppuccin_flutter: ^1.0.0
@@ -39,10 +40,11 @@ dependencies:
   # --- Audio & Datos ---
   just_audio: ^0.10.5        # Motor de reproducción
   audio_service: ^0.18.12    # Segundo plano y controles de bloqueo
-  # on_audio_query: ^2.9.0     # Escaneo de metadatos - requires AGP namespace fix
+  audio_metadata_reader: ^0.0.11 # Para extraer metadatos de archivos locales
   dio: ^5.4.0                # Para descargar metadatos faltantes
   rxdart: ^0.28.0        # Reactive streams
   palette_generator: ^0.3.3  # Para que la UI reaccione al arte del disco (opcional)
+  on_audio_query: ^2.9.0
 
 dev_dependencies:
   flutter_test:

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:icon_button_m3e/icon_button_m3e.dart';
 
+import '../../../../shared/widgets/album_art_widget.dart';
 import '../../../settings/presentation/providers/flavor_provider.dart';
 import '../providers/audio_player_provider.dart';
 
@@ -60,24 +61,11 @@ class MiniPlayer extends ConsumerWidget {
               child: Row(
                 children: [
                   // Album art thumbnail
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: flavor.mauve,
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(24),
-                      child: playerState.currentTrack?.albumArtBytes != null
-                          ? Image.memory(
-                              playerState.currentTrack!.albumArtBytes!,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  _buildPlaceholder(flavor),
-                            )
-                          : _buildPlaceholder(flavor),
-                    ),
+                  AlbumArtWidget(
+                    albumId: playerState.currentTrack?.albumId,
+                    size: 48,
+                    borderRadius: 24,
+                    flavor: flavor,
                   ),
                   const SizedBox(width: 12),
                   // Track info

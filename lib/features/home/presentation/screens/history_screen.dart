@@ -3,6 +3,7 @@ import 'package:catppuccin_flutter/catppuccin_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../shared/widgets/album_art_widget.dart';
 import '../../../audio_player/presentation/providers/audio_player_provider.dart';
 import '../../../audio_player/presentation/providers/history_provider.dart';
 import '../../../library/domain/entities/track.dart';
@@ -113,27 +114,12 @@ class _HistoryTrackTile extends ConsumerWidget {
   }
 
   Widget _buildAlbumArt() {
-    if (track.hasAlbumArt) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: track.albumArtBytes != null
-            ? Image.memory(
-                track.albumArtBytes!,
-                width: 48,
-                height: 48,
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => _buildPlaceholder(),
-              )
-            : Image.asset(
-                track.albumArtPath!,
-                width: 48,
-                height: 48,
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => _buildPlaceholder(),
-              ),
-      );
-    }
-    return _buildPlaceholder();
+    return AlbumArtWidget(
+      albumId: track.albumId,
+      size: 48,
+      borderRadius: 8,
+      flavor: flavor,
+    );
   }
 
   Widget _buildPlaceholder() {

@@ -1,8 +1,7 @@
-import 'dart:io';
-
 import 'package:catppuccin_flutter/catppuccin_flutter.dart';
 import 'package:flutter/material.dart';
 
+import '../../../../shared/widgets/album_art_widget.dart';
 import '../../domain/entities/album.dart';
 
 /// Album card widget for grid view.
@@ -74,23 +73,12 @@ class AlbumCard extends StatelessWidget {
   }
 
   Widget _buildCoverImage() {
-    if (album.albumArtBytes != null) {
-      return Image.memory(
-        album.albumArtBytes!,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
-      );
-    }
-
-    if (album.albumArtPath != null) {
-      return Image.file(
-        File(album.albumArtPath!),
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
-      );
-    }
-
-    return _buildPlaceholder();
+    return AlbumArtWidget(
+      albumId: album.albumId,
+      size: 160,
+      borderRadius: 12,
+      flavor: flavor,
+    );
   }
 
   Widget _buildPlaceholder() {
@@ -224,23 +212,12 @@ class AlbumListTile extends StatelessWidget {
   }
 
   Widget _buildCoverImage() {
-    if (album.albumArtBytes != null) {
-      return Image.memory(
-        album.albumArtBytes!,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
-      );
-    }
-
-    if (album.albumArtPath != null) {
-      return Image.file(
-        File(album.albumArtPath!),
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
-      );
-    }
-
-    return _buildPlaceholder();
+    return AlbumArtWidget(
+      albumId: album.albumId,
+      size: 56,
+      borderRadius: 8,
+      flavor: flavor,
+    );
   }
 
   Widget _buildPlaceholder() {

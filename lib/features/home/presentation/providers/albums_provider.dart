@@ -136,8 +136,7 @@ class AlbumsNotifier extends StateNotifier<AlbumsState> {
         return Album(
           name: firstTrack.album,
           artist: firstTrack.artist,
-          albumArtBytes: firstTrack.albumArtBytes,
-          albumArtPath: firstTrack.albumArtPath,
+          albumId: firstTrack.albumId,
           year: firstTrack.year,
           trackCount: albumTracks.length,
           dateAdded: null, // Could be derived from file metadata

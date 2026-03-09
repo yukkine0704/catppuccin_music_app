@@ -1,11 +1,14 @@
-import 'dart:typed_data';
+
 
 /// Immutable album entity representing a music album.
+/// Updated to use albumId for loading artwork on-demand.
 class Album {
   final String name;
   final String artist;
-  final Uint8List? albumArtBytes;
-  final String? albumArtPath;
+
+  /// Album ID for loading artwork on-demand via AlbumArtProvider.
+  final int? albumId;
+
   final int? year;
   final int trackCount;
   final DateTime? dateAdded;
@@ -13,22 +16,20 @@ class Album {
   const Album({
     required this.name,
     required this.artist,
-    this.albumArtBytes,
-    this.albumArtPath,
+    this.albumId,
     this.year,
     this.trackCount = 0,
     this.dateAdded,
   });
 
-  /// Returns true if the album has cover art.
-  bool get hasArt => albumArtBytes != null || albumArtPath != null;
+  /// Returns true if the album has an album ID for artwork loading.
+  bool get hasArt => albumId != null;
 
   /// Creates a copy with optional new values.
   Album copyWith({
     String? name,
     String? artist,
-    Uint8List? albumArtBytes,
-    String? albumArtPath,
+    int? albumId,
     int? year,
     int? trackCount,
     DateTime? dateAdded,
@@ -36,8 +37,7 @@ class Album {
     return Album(
       name: name ?? this.name,
       artist: artist ?? this.artist,
-      albumArtBytes: albumArtBytes ?? this.albumArtBytes,
-      albumArtPath: albumArtPath ?? this.albumArtPath,
+      albumId: albumId ?? this.albumId,
       year: year ?? this.year,
       trackCount: trackCount ?? this.trackCount,
       dateAdded: dateAdded ?? this.dateAdded,
@@ -54,4 +54,9 @@ class Album {
 
   @override
   int get hashCode => name.hashCode ^ artist.hashCode;
+
+  @override
+  String toString() {
+    return 'Album(name: $name, artist: $artist, albumId: $albumId)';
+  }
 }

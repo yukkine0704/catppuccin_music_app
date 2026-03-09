@@ -1,18 +1,23 @@
-import 'dart:typed_data';
 
-/// Immutable track entity representing a music track.
+
+/// Entidad Track inmutable que representa una pista de música.
+/// Actualizada para soportar el flujo de datos eficiente de MediaStore (on_audio_query).
 class Track {
   final int id;
   final String title;
   final String artist;
   final String album;
-  final String? albumArtPath;
-  final Uint8List? albumArtBytes;
+
+  /// Identificador único del álbum en el sistema.
+  /// Se usa para cargar la carátula de forma eficiente bajo demanda.
+  final int? albumId;
+
   final String filePath;
   final int duration;
   final int? trackNumber;
   final int? year;
-  final DateTime? dateAdded;
+  final int?
+  dateAdded; // Cambiado a int? para coincidir con el timestamp de MediaStore
   final String? genre;
 
   const Track({
@@ -20,8 +25,7 @@ class Track {
     required this.title,
     required this.artist,
     required this.album,
-    this.albumArtPath,
-    this.albumArtBytes,
+    this.albumId, // Nuevo campo clave
     required this.filePath,
     required this.duration,
     this.trackNumber,
@@ -30,22 +34,21 @@ class Track {
     this.genre,
   });
 
-  /// Returns true if the track has embedded album art.
-  bool get hasAlbumArt => albumArtBytes != null || albumArtPath != null;
+  /// Determina si la canción tiene información de álbum para intentar cargar una carátula.
+  bool get hasAlbumArt => albumId != null;
 
-  /// Creates a copy with optional new values.
+  /// Crea una copia con valores opcionales actualizados.
   Track copyWith({
     int? id,
     String? title,
     String? artist,
     String? album,
-    String? albumArtPath,
-    Uint8List? albumArtBytes,
+    int? albumId,
     String? filePath,
     int? duration,
     int? trackNumber,
     int? year,
-    DateTime? dateAdded,
+    int? dateAdded,
     String? genre,
   }) {
     return Track(
@@ -53,8 +56,7 @@ class Track {
       title: title ?? this.title,
       artist: artist ?? this.artist,
       album: album ?? this.album,
-      albumArtPath: albumArtPath ?? this.albumArtPath,
-      albumArtBytes: albumArtBytes ?? this.albumArtBytes,
+      albumId: albumId ?? this.albumId,
       filePath: filePath ?? this.filePath,
       duration: duration ?? this.duration,
       trackNumber: trackNumber ?? this.trackNumber,
@@ -72,4 +74,9 @@ class Track {
 
   @override
   int get hashCode => id.hashCode;
+
+  @override
+  String toString() {
+    return 'Track(id: $id, title: $title, artist: $artist, albumId: $albumId)';
+  }
 }

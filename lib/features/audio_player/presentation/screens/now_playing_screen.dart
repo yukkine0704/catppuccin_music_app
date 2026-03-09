@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:icon_button_m3e/icon_button_m3e.dart';
 
+import '../../../../shared/widgets/album_art_widget.dart';
 import '../../../settings/presentation/providers/flavor_provider.dart';
 import '../providers/audio_player_provider.dart';
 
@@ -65,9 +66,10 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen> {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Center(
-              child: _VinylWidget(
-                isPlaying: playerState.isPlaying,
-                albumArt: playerState.currentTrack?.albumArtBytes,
+              child: AlbumArtWidget(
+                albumId: playerState.currentTrack?.albumId,
+                size: 280,
+                borderRadius: 16,
                 flavor: flavor,
               ),
             ),

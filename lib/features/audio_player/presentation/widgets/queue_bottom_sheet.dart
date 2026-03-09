@@ -2,6 +2,7 @@ import 'package:catppuccin_flutter/catppuccin_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../shared/widgets/album_art_widget.dart';
 import '../../../library/domain/entities/track.dart';
 import '../../../settings/presentation/providers/flavor_provider.dart';
 import '../providers/audio_player_provider.dart';
@@ -289,18 +290,11 @@ class _QueueTrackTileState extends State<_QueueTrackTile>
           child: child,
         );
       },
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: widget.track.hasAlbumArt
-            ? Image.memory(
-                widget.track.albumArtBytes!,
-                width: 48,
-                height: 48,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) =>
-                    _buildDefaultAlbumArt(),
-              )
-            : _buildDefaultAlbumArt(),
+      child: AlbumArtWidget(
+        albumId: widget.track.albumId,
+        size: 48,
+        borderRadius: 8,
+        flavor: widget.flavor,
       ),
     );
   }

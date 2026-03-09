@@ -2,9 +2,11 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:on_audio_query/on_audio_query.dart';
 
 import '../../../../core/utils/album_color_extractor.dart';
 import '../../../../core/utils/album_color_mapper.dart';
+import '../../../library/data/providers/album_art_provider.dart';
 import '../../../settings/presentation/providers/flavor_provider.dart';
 import 'audio_player_provider.dart';
 
@@ -54,21 +56,40 @@ class AlbumAccentNotifier extends StateNotifier<AlbumAccentState> {
       ) {
     // Listen to track changes
     _ref.listen<PlayerState>(audioPlayerProvider, (previous, next) {
-      if (next.currentTrack?.albumArtBytes !=
-              previous?.currentTrack?.albumArtBytes ||
-          next.currentTrack?.genre != previous?.currentTrack?.genre) {
+      final previousAlbumId = previous?.currentTrack?.albumId;
+      final nextAlbumId = next.currentTrack?.albumId;
+      final previousGenre = previous?.currentTrack?.genre;
+      final nextGenre = next.currentTrack?.genre;
+
+      if (nextAlbumId != previousAlbumId || nextGenre != previousGenre) {
         _updateAccentColor(
-          next.currentTrack?.albumArtBytes,
-          next.currentTrack?.genre,
+          nextAlbumId, nextGenre,
         );
       }
     });
   }
 
   Future<void> _updateAccentColor(
-    Uint8List? albumArtBytes,
+    int? albumId,
     String? genre,
   ) async {
+    Uint8List? albumArtBytes;
+
+    // Try to get artwork bytes from albumId
+    if (albumId != null) {
+      final audioQuery = _ref.read(onAudioQueryProvider);
+      try {
+        albumArtBytes = await audioQuery.queryArtwork(
+          albumId,
+          ArtworkType.ALBUM,
+          size: 200, // Smaller size for color extraction
+          quality: 80,
+        );
+      } catch (_) {
+        // Artwork not available
+      }
+    }
+
     final flavor = _ref.read(flavorProvider);
 
     // Priority 1: Try album art colors

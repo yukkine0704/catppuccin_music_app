@@ -8,6 +8,7 @@ import 'package:flutter/physics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:icon_button_m3e/icon_button_m3e.dart';
 
+import '../../../../shared/widgets/album_art_widget.dart';
 import '../../../settings/presentation/providers/flavor_provider.dart';
 import '../providers/album_accent_provider.dart';
 import '../providers/audio_player_provider.dart';
@@ -227,21 +228,12 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
                 SizedBox(
                   height: clampedAlbumSize + 40,
                   child: Center(
-                    child: animationStyle == PlayerAnimationStyle.vinyl
-                        ? _VinylAnimationWidget(
-                            albumArt: playerState.currentTrack?.albumArtBytes,
-                            flavor: flavor,
-                            size: clampedAlbumSize,
-                            borderRadius: 16 + (value * 18),
-                            isPlaying: playerState.isPlaying,
-                          )
-                        : _AnimatedAlbumArt(
-                            albumArt: playerState.currentTrack?.albumArtBytes,
-                            flavor: flavor,
-                            size: clampedAlbumSize,
-                            borderRadius: 16 + (value * 18),
-                            isPlaying: playerState.isPlaying,
-                          ),
+                    child: AlbumArtWidget(
+                      albumId: playerState.currentTrack?.albumId,
+                      size: clampedAlbumSize,
+                      borderRadius: 16 + (value * 18),
+                      flavor: flavor,
+                    ),
                   ),
                 ),
 
@@ -573,19 +565,12 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
                     color: flavor.mauve.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: nextTrack.hasAlbumArt
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.memory(
-                            nextTrack.albumArtBytes!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => Icon(
-                              Icons.music_note_rounded,
-                              color: flavor.mauve,
-                            ),
-                          ),
-                        )
-                      : Icon(Icons.music_note_rounded, color: flavor.mauve),
+                  child: AlbumArtWidget(
+                    albumId: nextTrack.albumId,
+                    size: 56,
+                    borderRadius: 8,
+                    flavor: flavor,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 // Next track info
