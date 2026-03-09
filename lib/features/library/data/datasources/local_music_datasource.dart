@@ -1,38 +1,23 @@
-import 'dart:io';
 
 import 'package:dartz/dartz.dart';
-import 'package:on_audio_query/on_audio_query.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:photo_manager/photo_manager.dart';
 
 import '../../../../core/error/failures.dart';
 import '../../domain/entities/track.dart';
 
-/// Data source que emula el comportamiento de RetroMusicPlayer
-/// Utiliza MediaStore (Android) y MPMediaLibrary (iOS) en lugar de escaneo manual.
+/// Data source que utiliza photo_manager para interactuar con los archivos
+/// multimedia del sistema de forma moderna y compatible con Android 13+.
 class LocalMusicDatasource {
-  final OnAudioQuery _audioQuery = OnAudioQuery();
 
-  /// Solicita permisos siguiendo los estándares modernos de Android (13+)
+  /// Solicita permisos usando el gestor interno de photo_manager,
+  /// el cual ya está adaptado para los permisos granulares de Android modernos.
   Future<bool> requestPermissions() async {
-    if (Platform.isAndroid) {
-      // Android 13 (API 33) o superior requiere permisos granulares
-      final status = await Permission.audio.status;
-      if (status.isPermanentlyDenied) return false;
-
-      if (!status.isGranted) {
-        final result = await Permission.audio.request();
-        return result.isGranted;
-      }
-      return true;
-    } else {
-      // Para iOS u otras versiones de Android
-      final status = await Permission.storage.request();
-      return status.isGranted;
-    }
+    // requestPermissionExtend maneja automáticamente las diferencias entre OS
+    final PermissionState ps = await PhotoManager.requestPermissionExtend();
+    return ps.isAuth;
   }
 
-  /// Obtiene todas las canciones del dispositivo de forma casi instantánea.
-  /// No abre los archivos físicamente, solo consulta la base de datos del sistema.
+  /// Obtiene todos los archivos de audio del dispositivo.
   Future<Either<Failure, List<Track>>> getAllSongs({
     void Function(int total, int processed)? onProgress,
   }) async {
@@ -44,50 +29,65 @@ class LocalMusicDatasource {
         );
       }
 
-      // Consulta a la base de datos de medios (Equivalente a RetroMusicPlayer)
-      // Filtramos audios cortos (notificaciones/whatsapp) por defecto
-      final List<SongModel> songs = await _audioQuery.querySongs(
-        sortType: SongSortType.DATE_ADDED,
-        orderType: OrderType.DESC_OR_GREATER,
-        uriType: UriType.EXTERNAL,
-        ignoreCase: true,
+      // 1. Obtenemos los "álbumes" (carpetas del sistema) que contienen audio
+      final List<AssetPathEntity> paths = await PhotoManager.getAssetPathList(
+        type: RequestType.audio,
       );
 
-      if (songs.isEmpty) {
+      if (paths.isEmpty) {
         return const Right([]);
       }
 
-      final totalFiles = songs.length;
+      // 2. La primera ruta siempre es "Recent" (Todos los audios combinados)
+      final AssetPathEntity allAudioPath = paths.first;
+      final int totalFiles = await allAudioPath.assetCountAsync;
+
+      if (totalFiles == 0) {
+        return const Right([]);
+      }
+
       onProgress?.call(totalFiles, 0);
 
-      // Mapeo de SongModel a tu entidad Track
-      // Nota: No extraemos bytes de imagen aquí para evitar errores de memoria (OOM)
+      // 3. Obtenemos los assets (Puedes paginar aquí si son más de 10,000)
+      final List<AssetEntity> audioAssets = await allAudioPath
+          .getAssetListPaged(page: 0, size: totalFiles);
+
       final List<Track> tracks = [];
 
-      for (var i = 0; i < songs.length; i++) {
-        final s = songs[i];
+      // 4. Mapeo de AssetEntity a tu entidad Track
+      for (var i = 0; i < audioAssets.length; i++) {
+        final asset = audioAssets[i];
 
-        tracks.add(
-          Track(
-            id: s.id,
-            title: s.title,
-            artist: s.artist == '<unknown>'
-                ? 'Artista Desconocido'
-                : (s.artist ?? 'Artista Desconocido'),
-            album: s.album == '<unknown>'
-                ? 'Álbum Desconocido'
-                : (s.album ?? 'Álbum Desconocido'),
-            filePath: s.data,
-            duration: s.duration ?? 0,
-            albumId: s.albumId, // <--- CAMBIO CLAVE: Guardamos el ID del álbum
-            genre: s.genre,
-            year: s.getMap['year'], // Extraemos el año del mapa interno
-            trackNumber: s.track,
-            dateAdded: s.dateAdded,
-          ),
-        );
+        // Obtenemos el archivo físico para sacar la ruta
+        final file = await asset.file;
 
-        // Reporte de progreso (aunque es tan rápido que apenas se notará)
+        if (file != null) {
+          tracks.add(
+            Track(
+              // Convertimos el ID String del sistema a int, o usamos el hashCode como fallback
+              id: int.tryParse(asset.id) ?? asset.id.hashCode,
+              title: asset.title ?? 'Pista sin título',
+
+              // Nota: photo_manager no lee etiquetas ID3 (Artista/Álbum) nativamente.
+              // Estos datos base te permitirán arrancar.
+              artist: 'Artista Desconocido',
+              album: 'Álbum Desconocido',
+
+              filePath: file.path,
+              // photo_manager devuelve la duración en segundos, la pasamos a ms
+              duration: asset.duration * 1000,
+
+              // Usamos el hash de la ruta relativa (carpeta) para agrupar álbumes temporalmente
+              albumId: asset.relativePath?.hashCode,
+              genre: null,
+              year: asset.createDateTime.year,
+              trackNumber: null,
+              dateAdded: asset.createDateTime.millisecondsSinceEpoch ~/ 1000,
+            ),
+          );
+        }
+
+        // Reporte de progreso
         if (i % 20 == 0) {
           onProgress?.call(totalFiles, i + 1);
         }
@@ -96,14 +96,13 @@ class LocalMusicDatasource {
       onProgress?.call(totalFiles, totalFiles);
       return Right(tracks);
     } catch (e) {
-      return Left(DatabaseFailure('Error al consultar MediaStore: $e'));
+      return Left(DatabaseFailure('Error al consultar archivos: $e'));
     }
   }
 
-  /// Este método ya no es necesario para el escaneo inicial,
-  /// pero podrías usarlo para actualizar metadata específica.
+  /// Con photo_manager, las carátulas se pueden obtener directamente del AssetEntity
+  /// usando asset.thumbnailData. Dejamos este método para compatibilidad de la interfaz.
   Future<dynamic> getArtwork(int id) async {
-    // La carátula se maneja de forma reactiva en la UI
     return null;
   }
 }

@@ -44,7 +44,7 @@ dependencies:
   dio: ^5.4.0                # Para descargar metadatos faltantes
   rxdart: ^0.28.0        # Reactive streams
   palette_generator: ^0.3.3  # Para que la UI reaccione al arte del disco (opcional)
-  on_audio_query: ^2.9.0
+  photo_manager: ^3.9.0
 
 dev_dependencies:
   flutter_test:

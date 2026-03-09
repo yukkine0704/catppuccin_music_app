@@ -2,7 +2,6 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:on_audio_query/on_audio_query.dart';
 
 import '../../../../core/utils/album_color_extractor.dart';
 import '../../../../core/utils/album_color_mapper.dart';
@@ -75,15 +74,17 @@ class AlbumAccentNotifier extends StateNotifier<AlbumAccentState> {
   ) async {
     Uint8List? albumArtBytes;
 
-    // Try to get artwork bytes from albumId
+    // Try to get artwork bytes from albumId using photo_manager
     if (albumId != null) {
-      final audioQuery = _ref.read(onAudioQueryProvider);
       try {
-        albumArtBytes = await audioQuery.queryArtwork(
-          albumId,
-          ArtworkType.ALBUM,
-          size: 200, // Smaller size for color extraction
-          quality: 80,
+        // Use the albumArtProvider from album_art_provider.dart
+        final artworkAsync = _ref.read(albumArtProvider(albumId));
+
+        // Await the AsyncValue to get the actual bytes
+        albumArtBytes = await artworkAsync.when(
+          data: (data) async => data,
+          loading: () async => null,
+          error: (_, __) async => null,
         );
       } catch (_) {
         // Artwork not available
