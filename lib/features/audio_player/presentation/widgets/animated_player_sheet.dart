@@ -204,6 +204,15 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
     double value,
     PlayerAnimationStyle animationStyle,
   ) {
+    // DEBUG: Log track info when building expanded content
+    debugPrint('=== DEBUG UI: _buildExpandedContent ===');
+    debugPrint('Current track title: ${playerState.currentTrack?.title}');
+    debugPrint('Current track artist: ${playerState.currentTrack?.artist}');
+    debugPrint('Current track album: ${playerState.currentTrack?.album}');
+    debugPrint('Current track albumId: ${playerState.currentTrack?.albumId}');
+    debugPrint('Current track filePath: ${playerState.currentTrack?.filePath}');
+    debugPrint('===========================================');
+
     final screenWidth = MediaQuery.of(context).size.width;
 
     return LayoutBuilder(
@@ -311,6 +320,14 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
     PlayerState playerState,
     double value,
   ) {
+    // DEBUG: Log artist info being displayed
+    debugPrint(
+      'DEBUG UI _buildMusicInfoRow: Displaying artist: ${playerState.currentTrack?.artist ?? "Unknown Artist"}',
+    );
+    debugPrint(
+      'DEBUG UI _buildMusicInfoRow: Displaying title: ${playerState.currentTrack?.title}',
+    );
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
