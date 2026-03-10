@@ -1,15 +1,11 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/utils/album_color_extractor.dart';
-import '../../../../core/utils/album_color_mapper.dart';
 import '../../../library/data/providers/album_art_provider.dart';
 import '../../../settings/presentation/providers/flavor_provider.dart';
 import 'audio_player_provider.dart';
 
-/// State class for album-based accent colors
+/// State class for album-based accent colors.
 class AlbumAccentState {
   final Color accentColor;
   final bool useAlbumColors;
@@ -38,7 +34,7 @@ class AlbumAccentState {
   }
 }
 
-/// Provider for album-based accent colors
+/// Provider for album-based accent colors.
 final albumAccentProvider =
     StateNotifierProvider<AlbumAccentNotifier, AlbumAccentState>((ref) {
       return AlbumAccentNotifier(ref);
@@ -55,72 +51,55 @@ class AlbumAccentNotifier extends StateNotifier<AlbumAccentState> {
       ) {
     // Listen to track changes
     _ref.listen<PlayerState>(audioPlayerProvider, (previous, next) {
-      final previousAlbumId = previous?.currentTrack?.albumId;
-      final nextAlbumId = next.currentTrack?.albumId;
+      final previousFilePath = previous?.currentTrack?.filePath;
+      final nextFilePath = next.currentTrack?.filePath;
       final previousGenre = previous?.currentTrack?.genre;
       final nextGenre = next.currentTrack?.genre;
 
-      if (nextAlbumId != previousAlbumId || nextGenre != previousGenre) {
+      if (nextFilePath != previousFilePath || nextGenre != previousGenre) {
         _updateAccentColor(
-          nextAlbumId, nextGenre,
+          nextFilePath, nextGenre,
         );
       }
     });
   }
 
   Future<void> _updateAccentColor(
-    int? albumId,
+    String? filePath,
     String? genre,
   ) async {
-    Uint8List? albumArtBytes;
-
-    // Try to get artwork bytes from albumId using photo_manager
-    if (albumId != null) {
-      try {
-        // Use the albumArtProvider from album_art_provider.dart
-        final artworkAsync = _ref.read(albumArtProvider(albumId));
-
-        // Await the AsyncValue to get the actual bytes
-        albumArtBytes = await artworkAsync.when(
-          data: (data) async => data,
-          loading: () async => null,
-          error: (_, __) async => null,
-        );
-      } catch (_) {
-        // Artwork not available
-      }
-    }
-
+    final repository = _ref.read(artworkRepositoryProvider);
     final flavor = _ref.read(flavorProvider);
 
-    // Priority 1: Try album art colors
-    if (albumArtBytes != null) {
+    // Priority 1: Try to get artwork colors from filePath
+    if (filePath != null && filePath.isNotEmpty) {
       state = state.copyWith(isLoading: true);
 
-      final dominantColor = await AlbumColorExtractor.extractDominantColor(
-        albumArtBytes,
+      final artworkAsync = _ref.read(albumArtWithColorsProvider(filePath));
+
+      final albumArt = await artworkAsync.when(
+        data: (data) async => data,
+        loading: () async => null,
+        error: (_, __) async => null,
       );
 
-      if (dominantColor != null &&
-          AlbumColorExtractor.isColorful(dominantColor)) {
-        final accentColor = AlbumColorMapper.findClosestAccent(
-          dominantColor,
-          flavor,
-        );
-
-        state = AlbumAccentState(
-          accentColor: accentColor,
-          useAlbumColors: true,
-          useGenreColors: false,
-          isLoading: false,
-        );
-        return;
+      if (albumArt != null && albumArt.hasArtwork) {
+        // Colors were extracted when we got the artwork
+        if (albumArt.accentColor != null) {
+          state = AlbumAccentState(
+            accentColor: albumArt.accentColor!,
+            useAlbumColors: true,
+            useGenreColors: false,
+            isLoading: false,
+          );
+          return;
+        }
       }
     }
 
     // Priority 2: Try genre mapping
     if (genre != null && genre.isNotEmpty) {
-      final genreAccent = AlbumColorMapper.getGenreAccent(genre, flavor);
+      final genreAccent = repository.getAccentFromGenre(genre, flavor);
 
       state = AlbumAccentState(
         accentColor: genreAccent,
@@ -133,14 +112,14 @@ class AlbumAccentNotifier extends StateNotifier<AlbumAccentState> {
 
     // Fallback: Default accent
     state = AlbumAccentState(
-      accentColor: flavor.mauve,
+      accentColor: repository.getDefaultAccent(flavor),
       useAlbumColors: false,
       useGenreColors: false,
       isLoading: false,
     );
   }
 
-  /// Manually set accent color (for settings or fallback)
+  /// Manually set accent color (for settings or fallback).
   void setAccentColor(Color color) {
     state = AlbumAccentState(
       accentColor: color,

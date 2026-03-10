@@ -1,65 +1,54 @@
 import 'package:catppuccin_flutter/catppuccin_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-/// Provider that manages the selected Catppuccin flavor globally.
-/// Uses SharedPreferences to persist the user's choice.
-final flavorProvider = StateNotifierProvider<FlavorNotifier, Flavor>((ref) {
-  return FlavorNotifier();
+import '../../../../core/di/injection_container.dart';
+import '../../data/repositories/settings_repository.dart';
+
+/// Provider for SettingsRepository.
+final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
+  return getIt<SettingsRepository>();
 });
 
-/// Helper to get SharedPreferences instance
-final _prefsProvider = FutureProvider<SharedPreferences>((ref) async {
-  return SharedPreferences.getInstance();
+/// Provider that manages the selected Catppuccin flavor globally.
+/// Uses SettingsRepository to persist the user's choice.
+final flavorProvider = StateNotifierProvider<FlavorNotifier, Flavor>((ref) {
+  final repository = ref.watch(settingsRepositoryProvider);
+  return FlavorNotifier(repository);
 });
 
 /// StateNotifier that manages the selected flavor state.
 class FlavorNotifier extends StateNotifier<Flavor> {
-  FlavorNotifier() : super(catppuccin.mocha) {
+  final SettingsRepository _repository;
+
+  FlavorNotifier(this._repository) : super(catppuccin.mocha) {
     _loadFlavor();
   }
 
   Future<void> _loadFlavor() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final flavorIndex = prefs.getInt('flavorIndex') ?? 0;
-      state = _getFlavorByIndex(flavorIndex);
-    } catch (e) {
-      // If loading fails, keep default mocha
-    }
+    final result = _repository.getFlavor();
+
+    result.fold(
+      (failure) {
+        // If loading fails, keep default mocha
+      },
+      (flavor) {
+        state = flavor;
+      },
+    );
   }
 
-  Flavor _getFlavorByIndex(int index) {
-    switch (index) {
-      case 0:
-        return catppuccin.mocha;
-      case 1:
-        return catppuccin.latte;
-      case 2:
-        return catppuccin.frappe;
-      case 3:
-        return catppuccin.macchiato;
-      default:
-        return catppuccin.mocha;
-    }
-  }
-
-  int _getFlavorIndex(Flavor flavor) {
-    if (flavor == catppuccin.latte) return 1;
-    if (flavor == catppuccin.frappe) return 2;
-    if (flavor == catppuccin.macchiato) return 3;
-    return 0;
-  }
-
-  /// Sets the flavor and persists it to SharedPreferences.
+  /// Sets the flavor and persists it to storage.
   Future<void> setFlavor(Flavor flavor) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt('flavorIndex', _getFlavorIndex(flavor));
-      state = flavor;
-    } catch (e) {
-      // If saving fails, still update state
-      state = flavor;
-    }
+    final result = _repository.setFlavor(flavor);
+
+    result.fold(
+      (failure) {
+        // If saving fails, still update state
+        state = flavor;
+      },
+      (_) {
+        state = flavor;
+      },
+    );
   }
 }

@@ -2,9 +2,13 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get_it/get_it.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../features/library/data/datasources/local_music_datasource.dart';
+import '../../features/library/data/repositories/artwork_repository.dart';
 import '../../features/metadata_fetcher/data/datasources/metadata_fetcher_datasource.dart';
+import '../../features/settings/data/datasources/shared_prefs_datasource.dart';
+import '../../features/settings/data/repositories/settings_repository.dart';
 
 final getIt = GetIt.instance;
 
@@ -29,6 +33,13 @@ Future<void> initializeDependencies() async {
   // to ensure we get the actual handler that AudioService is using.
   // This prevents issues with isolate-based audio processing.
 
+  // SharedPreferences - Must be initialized before other dependencies
+  if (!getIt.isRegistered<SharedPreferences>()) {
+    debugPrint('[DI] Registering SharedPreferences...');
+    final prefs = await SharedPreferences.getInstance();
+    getIt.registerSingleton<SharedPreferences>(prefs);
+  }
+
   // Data Sources - Singleton protection
   if (!getIt.isRegistered<LocalMusicDatasource>()) {
     debugPrint('[DI] Registering LocalMusicDatasource...');
@@ -42,6 +53,26 @@ Future<void> initializeDependencies() async {
     getIt.registerLazySingleton<MetadataFetcherDatasource>(
       () => MetadataFetcherDatasource(getIt<Dio>()),
     );
+  }
+
+  if (!getIt.isRegistered<SharedPrefsDatasource>()) {
+    debugPrint('[DI] Registering SharedPrefsDatasource...');
+    getIt.registerLazySingleton<SharedPrefsDatasource>(
+      () => SharedPrefsDatasource(getIt<SharedPreferences>()),
+    );
+  }
+
+  // Repositories - Singleton protection
+  if (!getIt.isRegistered<SettingsRepository>()) {
+    debugPrint('[DI] Registering SettingsRepository...');
+    getIt.registerLazySingleton<SettingsRepository>(
+      () => SettingsRepository(getIt<SharedPrefsDatasource>()),
+    );
+  }
+
+  if (!getIt.isRegistered<ArtworkRepository>()) {
+    debugPrint('[DI] Registering ArtworkRepository...');
+    getIt.registerLazySingleton<ArtworkRepository>(() => ArtworkRepository());
   }
 
   debugPrint('[DI] Dependency injection complete');

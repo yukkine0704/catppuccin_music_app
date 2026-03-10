@@ -1,12 +1,18 @@
-import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:audio_metadata_reader/audio_metadata_reader.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:photo_manager/photo_manager.dart';
 
+import '../../../../core/di/injection_container.dart';
+import '../repositories/artwork_repository.dart';
+
+/// Provider for ArtworkRepository.
+final artworkRepositoryProvider = Provider<ArtworkRepository>((ref) {
+  return getIt<ArtworkRepository>();
+});
+
 /// Cache for storing artwork bytes in memory.
-/// Key: filePath (String) or albumId (int), Value: artwork bytes
+/// Key: filePath (String) or albumId (String), Value: artwork bytes
 final _artworkCache = <String, Uint8List>{};
 
 /// Provider for loading album artwork by filePath using audio_metadata_reader.
@@ -26,34 +32,21 @@ final albumArtFromFileProvider = FutureProvider.family<Uint8List?, String?>((
     return _artworkCache[filePath];
   }
 
-  try {
-    final file = File(filePath);
-    if (!file.existsSync()) return null;
+  final repository = ref.watch(artworkRepositoryProvider);
 
-    // Extract metadata with image
-    final metadata = readMetadata(file, getImage: true);
+  final result = await repository.getArtworkFromFile(filePath);
 
-    // Get the first picture (usually the front cover)
-    if (metadata.pictures.isNotEmpty) {
-      final picture = metadata.pictures.first;
-      final bytes = picture.bytes;
-
-      if (bytes.isNotEmpty) {
-        // Store in cache
+  return result.fold((failure) => null, (bytes) {
+    if (bytes != null && bytes.isNotEmpty) {
         _artworkCache[filePath] = bytes;
-        return bytes;
-      }
     }
-
-    return null;
-  } catch (e) {
-    // Artwork not available for this file
-    return null;
-  }
+    return bytes;
+  });
 });
 
 /// Provider for loading album artwork by albumId (legacy method using photo_manager).
 /// Uses photo_manager to fetch artwork dynamically.
+/// Note: Prefer using albumArtFromFileProvider with filePath when available.
 ///
 /// Returns:
 /// - `null` if albumId is null or artwork not found
@@ -112,6 +105,40 @@ final albumArtProvider = FutureProvider.family<Uint8List?, int?>((ref, albumId) 
     // Artwork not available for this album
     return null;
   }
+});
+
+/// Provider for loading album artwork and colors by filePath.
+/// This is the main provider for the album accent feature.
+///
+/// Returns:
+/// - `AlbumArt` object containing bytes and extracted colors
+final albumArtWithColorsProvider = FutureProvider.family<AlbumArt, String?>((
+  ref,
+  filePath,
+) async {
+  if (filePath == null || filePath.isEmpty) {
+    return const AlbumArt(bytes: null);
+  }
+
+  // Check cache first for basic artwork
+  if (_artworkCache.containsKey(filePath)) {
+    // Return cached bytes without re-extracting colors
+    // Colors will be computed on-demand by album_accent_provider
+    return AlbumArt(bytes: _artworkCache[filePath]);
+  }
+
+  final repository = ref.watch(artworkRepositoryProvider);
+
+  // We need the flavor to compute colors, but this provider is flavor-agnostic
+  // So we just return the artwork bytes here, colors are computed separately
+  final result = await repository.getArtworkFromFile(filePath);
+
+  return result.fold((failure) => const AlbumArt(bytes: null), (bytes) {
+    if (bytes != null && bytes.isNotEmpty) {
+      _artworkCache[filePath] = bytes;
+    }
+    return AlbumArt(bytes: bytes);
+  });
 });
 
 /// Clears the artwork cache.

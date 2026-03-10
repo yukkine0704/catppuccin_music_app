@@ -3,9 +3,9 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:palette_generator/palette_generator.dart';
 
-/// Utility class to extract colors from album art
+/// Utility class to extract colors from album art.
 class AlbumColorExtractor {
-  /// Extracts the dominant color from album art bytes
+  /// Extracts the dominant color from album art bytes.
   static Future<Color?> extractDominantColor(Uint8List? imageBytes) async {
     if (imageBytes == null) return null;
 
@@ -27,7 +27,7 @@ class AlbumColorExtractor {
     }
   }
 
-  /// Checks if the color is colorful enough (not grayscale/low saturation)
+  /// Checks if the color is colorful enough (not grayscale/low saturation).
   static bool isColorful(Color color) {
     final hsl = HSLColor.fromColor(color);
     // Saturation below 15% is considered grayscale

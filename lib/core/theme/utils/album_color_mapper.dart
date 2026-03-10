@@ -1,11 +1,11 @@
 import 'package:catppuccin_flutter/catppuccin_flutter.dart';
 import 'package:flutter/material.dart';
 
-/// Maps extracted album colors to closest Catppuccin accent
+/// Maps extracted album colors to closest Catppuccin accent.
 class AlbumColorMapper {
-  /// Maps genre to Catppuccin accent color (English & Spanish)
-  /// Used as fallback when no album art is available
-  /// Note: Using mocha colors as reference, mapped to current flavor at runtime
+  /// Maps genre to Catppuccin accent color (English & Spanish).
+  /// Used as fallback when no album art is available.
+  /// Note: Using mocha colors as reference, mapped to current flavor at runtime.
   static final Map<String, Color> genreColorMap = {
     // English genres
     'rock': catppuccin.mocha.red,
@@ -46,7 +46,7 @@ class AlbumColorMapper {
     'latino': catppuccin.mocha.peach,
   };
 
-  /// Gets accent color based on genre
+  /// Gets accent color based on genre.
   static Color getGenreAccent(String? genre, Flavor flavor) {
     if (genre == null || genre.isEmpty) {
       return flavor.mauve; // Default
@@ -119,7 +119,7 @@ class AlbumColorMapper {
     return flavor.mauve; // Default
   }
 
-  /// Maps a color from mocha to the current flavor's equivalent
+  /// Maps a color from mocha to the current flavor's equivalent.
   static Color _mapToFlavor(Color mochaColor, Flavor flavor) {
     // Find which accent this is in mocha
     final mochaAccents = {
@@ -171,7 +171,7 @@ class AlbumColorMapper {
     }
   }
 
-  /// Finds the closest Catppuccin accent color to the given color
+  /// Finds the closest Catppuccin accent color to the given color.
   static Color findClosestAccent(Color color, Flavor flavor) {
     // Get accent colors for the current flavor
     final flavorAccents = _getFlavorAccents(flavor);
@@ -190,7 +190,7 @@ class AlbumColorMapper {
     return closest;
   }
 
-  /// Gets accent colors for a specific flavor
+  /// Gets accent colors for a specific flavor.
   static List<Color> _getFlavorAccents(Flavor flavor) {
     return [
       flavor.mauve,
@@ -208,7 +208,7 @@ class AlbumColorMapper {
     ];
   }
 
-  /// Calculates Euclidean distance between two colors in RGB space
+  /// Calculates Euclidean distance between two colors in RGB space.
   static double _colorDistance(Color a, Color b) {
     final dr = (a.r * 255).round() - (b.r * 255).round();
     final dg = (a.g * 255).round() - (b.g * 255).round();
