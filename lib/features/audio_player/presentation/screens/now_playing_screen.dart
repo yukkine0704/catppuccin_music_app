@@ -9,6 +9,7 @@ import 'package:icon_button_m3e/icon_button_m3e.dart';
 
 import '../../../../shared/widgets/album_art_widget.dart';
 import '../../../settings/presentation/providers/flavor_provider.dart';
+import '../providers/album_accent_provider.dart';
 import '../providers/audio_player_provider.dart';
 
 /// Now Playing screen with vinyl animation - M3E Redesigned version.
@@ -31,6 +32,10 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen> {
   Widget build(BuildContext context) {
     final flavor = ref.watch(flavorProvider);
     final playerState = ref.watch(audioPlayerProvider);
+    final accentState = ref.watch(albumAccentProvider);
+    final accentColor = accentState.useAlbumColors || accentState.useGenreColors
+        ? accentState.accentColor
+        : flavor.mauve;
 
     return Scaffold(
       backgroundColor: flavor.base,
@@ -240,6 +245,10 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen> {
 
   Widget _buildControlPanel(PlayerState state, Flavor flavor) {
     final notifier = ref.read(audioPlayerProvider.notifier);
+    final accentState = ref.watch(albumAccentProvider);
+    final accentColor = accentState.useAlbumColors || accentState.useGenreColors
+        ? accentState.accentColor
+        : flavor.mauve;
 
     return Column(
       children: [
@@ -252,7 +261,7 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen> {
               size: IconButtonM3ESize.lg,
               icon: Icon(
                 Icons.skip_previous_rounded,
-                color: flavor.text,
+                color: accentColor,
                 size: 36,
               ),
               onPressed: () => notifier.skipToPrevious(),
@@ -276,7 +285,7 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen> {
             IconButtonM3E(
               variant: IconButtonM3EVariant.standard,
               size: IconButtonM3ESize.lg,
-              icon: Icon(Icons.skip_next_rounded, color: flavor.text, size: 36),
+              icon: Icon(Icons.skip_next_rounded, color: accentColor, size: 36),
               onPressed: () => notifier.skipToNext(),
             ),
           ],

@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:catppuccin_flutter/catppuccin_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:photo_manager/photo_manager.dart';
 
@@ -110,36 +111,40 @@ final albumArtProvider = FutureProvider.family<Uint8List?, int?>((ref, albumId) 
 /// Provider for loading album artwork and colors by filePath.
 /// This is the main provider for the album accent feature.
 ///
+/// Parameters:
+/// - params: A tuple of (filePath, flavor) where filePath is the audio file path
+///   and flavor is the Catppuccin flavor to use for color mapping
+///
 /// Returns:
 /// - `AlbumArt` object containing bytes and extracted colors
-final albumArtWithColorsProvider = FutureProvider.family<AlbumArt, String?>((
-  ref,
-  filePath,
-) async {
-  if (filePath == null || filePath.isEmpty) {
-    return const AlbumArt(bytes: null);
-  }
+final albumArtWithColorsProvider =
+    FutureProvider.family<AlbumArt, (String?, Flavor)>((ref, params) async {
+      final filePath = params.$1;
+      final flavor = params.$2;
 
-  // Check cache first for basic artwork
-  if (_artworkCache.containsKey(filePath)) {
-    // Return cached bytes without re-extracting colors
-    // Colors will be computed on-demand by album_accent_provider
-    return AlbumArt(bytes: _artworkCache[filePath]);
-  }
+      if (filePath == null || filePath.isEmpty) {
+        return const AlbumArt(bytes: null);
+      }
 
-  final repository = ref.watch(artworkRepositoryProvider);
+      // Check cache first for basic artwork
+      if (_artworkCache.containsKey(filePath)) {
+        // Return cached bytes without re-extracting colors
+        // Colors will be computed on-demand by album_accent_provider
+        return AlbumArt(bytes: _artworkCache[filePath]);
+      }
 
-  // We need the flavor to compute colors, but this provider is flavor-agnostic
-  // So we just return the artwork bytes here, colors are computed separately
-  final result = await repository.getArtworkFromFile(filePath);
+      final repository = ref.watch(artworkRepositoryProvider);
 
-  return result.fold((failure) => const AlbumArt(bytes: null), (bytes) {
-    if (bytes != null && bytes.isNotEmpty) {
-      _artworkCache[filePath] = bytes;
-    }
-    return AlbumArt(bytes: bytes);
-  });
-});
+      // Use the repository method that computes colors based on flavor
+      final result = await repository.getAlbumArtWithColors(filePath, flavor);
+
+      return result.fold((failure) => const AlbumArt(bytes: null), (albumArt) {
+        if (albumArt.bytes != null && albumArt.bytes!.isNotEmpty) {
+          _artworkCache[filePath] = albumArt.bytes!;
+        }
+        return albumArt;
+      });
+    });
 
 /// Clears the artwork cache.
 /// Useful when library is refreshed.

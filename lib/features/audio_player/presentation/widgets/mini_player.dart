@@ -5,6 +5,7 @@ import 'package:icon_button_m3e/icon_button_m3e.dart';
 
 import '../../../../shared/widgets/album_art_widget.dart';
 import '../../../settings/presentation/providers/flavor_provider.dart';
+import '../providers/album_accent_provider.dart';
 import '../providers/audio_player_provider.dart';
 
 /// Mini player widget displayed at the bottom of the screen above navigation bar.
@@ -21,6 +22,10 @@ class MiniPlayer extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final flavor = ref.watch(flavorProvider);
     final playerState = ref.watch(audioPlayerProvider);
+    final accentState = ref.watch(albumAccentProvider);
+    final accentColor = accentState.useAlbumColors || accentState.useGenreColors
+        ? accentState.accentColor
+        : flavor.mauve;
 
     // Don't show mini player if no track is loaded
     if (playerState.currentTrack == null) {

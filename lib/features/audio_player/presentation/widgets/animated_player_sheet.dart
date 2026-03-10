@@ -442,6 +442,10 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
 
   Widget _buildControlPanel(PlayerState state, Flavor flavor, double value) {
     final notifier = ref.read(audioPlayerProvider.notifier);
+    final accentState = ref.watch(albumAccentProvider);
+    final accentColor = accentState.useAlbumColors || accentState.useGenreColors
+        ? accentState.accentColor
+        : flavor.mauve;
 
     return Column(
       children: [
@@ -456,7 +460,7 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
                 size: IconButtonM3ESize.lg,
                 icon: Icon(
                   Icons.skip_previous_rounded,
-                  color: flavor.text,
+                  color: accentColor,
                   size: _lerp(28, 36, value),
                 ),
                 onPressed: () => notifier.skipToPrevious(),
@@ -483,7 +487,7 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
                 size: IconButtonM3ESize.lg,
                 icon: Icon(
                   Icons.skip_next_rounded,
-                  color: flavor.text,
+                  color: accentColor,
                   size: _lerp(28, 36, value),
                 ),
                 onPressed: () => notifier.skipToNext(),

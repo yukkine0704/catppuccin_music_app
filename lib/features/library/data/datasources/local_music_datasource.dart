@@ -90,11 +90,6 @@ class LocalMusicDatasource {
       for (var i = 0; i < audioAssets.length; i++) {
         final asset = audioAssets[i];
 
-        debugPrint('Asset ID: ${asset.id}');
-        debugPrint('Asset title: ${asset.title}');
-        debugPrint('Asset duration: ${asset.duration}');
-        debugPrint('Asset createDateTime: ${asset.createDateTime}');
-
         // Obtenemos el archivo físico para sacar la ruta
         final file = await asset.file;
 
