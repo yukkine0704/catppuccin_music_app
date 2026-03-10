@@ -841,15 +841,14 @@ class _TrackListTile extends ConsumerWidget {
   }
 
   Widget _buildAlbumArt() {
-    if (track.hasAlbumArt) {
-      return AlbumArtWidget(
-        albumId: track.albumId,
-        size: 48,
-        borderRadius: 8,
-        placeholderIcon: Icons.music_note_rounded,
-      );
-    }
-    return _buildPlaceholder();
+    // Prefer filePath for embedded album art, fallback to albumId
+    return AlbumArtWidget(
+      filePath: track.filePath,
+      albumId: track.albumId,
+      size: 48,
+      borderRadius: 8,
+      placeholderIcon: Icons.music_note_rounded,
+    );
   }
 
   Widget _buildPlaceholder() {

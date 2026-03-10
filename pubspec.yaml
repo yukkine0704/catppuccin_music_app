@@ -40,7 +40,7 @@ dependencies:
   # --- Audio & Datos ---
   just_audio: ^0.10.5        # Motor de reproducción
   audio_service: ^0.18.12    # Segundo plano y controles de bloqueo
-  audio_metadata_reader: ^0.0.11 # Para extraer metadatos de archivos locales
+  audio_metadata_reader: ^1.4.2 # Para extraer metadatos de archivos locales
   dio: ^5.4.0                # Para descargar metadatos faltantes
   rxdart: ^0.28.0        # Reactive streams
   palette_generator: ^0.3.3  # Para que la UI reaccione al arte del disco (opcional)

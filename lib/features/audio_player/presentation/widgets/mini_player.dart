@@ -62,6 +62,7 @@ class MiniPlayer extends ConsumerWidget {
                 children: [
                   // Album art thumbnail
                   AlbumArtWidget(
+                    filePath: playerState.currentTrack?.filePath,
                     albumId: playerState.currentTrack?.albumId,
                     size: 48,
                     borderRadius: 24,

@@ -291,6 +291,7 @@ class _QueueTrackTileState extends State<_QueueTrackTile>
         );
       },
       child: AlbumArtWidget(
+        filePath: widget.track.filePath,
         albumId: widget.track.albumId,
         size: 48,
         borderRadius: 8,

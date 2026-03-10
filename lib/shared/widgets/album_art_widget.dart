@@ -7,10 +7,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../features/library/data/providers/album_art_provider.dart';
 
 /// Reusable widget for displaying album artwork.
-/// Uses AlbumArtProvider to load artwork by albumId.
+/// Supports two modes:
+/// 1. filePath mode (preferred): Extracts embedded album art from the audio file
+/// 2. albumId mode (legacy): Uses photo_manager to get artwork
+///
 /// Shows a placeholder when no artwork is available.
 class AlbumArtWidget extends ConsumerWidget {
-  /// The album ID to load artwork for.
+  /// The file path to extract artwork from (preferred method).
+  final String? filePath;
+
+  /// The album ID to load artwork for (legacy method).
+  /// Used as fallback when filePath is not provided.
   final int? albumId;
 
   /// Size of the artwork.
@@ -27,16 +34,50 @@ class AlbumArtWidget extends ConsumerWidget {
 
   const AlbumArtWidget({
     super.key,
-    required this.albumId,
+    this.filePath,
+    this.albumId,
     this.size = 48,
     this.borderRadius = 8,
     this.placeholderIcon,
     this.flavor,
-  });
+  }) : assert(
+         filePath != null || albumId != null,
+         'Either filePath or albumId must be provided',
+       );
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Use albumId - if null, return placeholder immediately
+    // Prefer filePath if available (better quality from embedded art)
+    if (filePath != null && filePath!.isNotEmpty) {
+      final artworkAsync = ref.watch(albumArtFromFileProvider(filePath));
+
+      return artworkAsync.when(
+        data: (artworkBytes) {
+          if (artworkBytes != null && artworkBytes.isNotEmpty) {
+            return _buildArtwork(artworkBytes);
+          }
+          // Fallback to albumId if no embedded art found
+          if (albumId != null) {
+            return _buildFromAlbumId(ref, albumId);
+          }
+          return _buildPlaceholder();
+        },
+        loading: () => _buildLoading(),
+        error: (_, __) {
+          // Fallback to albumId on error
+          if (albumId != null) {
+            return _buildFromAlbumId(ref, albumId);
+          }
+          return _buildPlaceholder();
+        },
+      );
+    }
+
+    // Legacy mode: use albumId
+    return _buildFromAlbumId(ref, albumId);
+  }
+
+  Widget _buildFromAlbumId(WidgetRef ref, int? albumId) {
     if (albumId == null) {
       return _buildPlaceholder();
     }

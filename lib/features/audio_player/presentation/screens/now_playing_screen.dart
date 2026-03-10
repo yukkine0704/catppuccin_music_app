@@ -67,6 +67,7 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Center(
               child: AlbumArtWidget(
+                filePath: playerState.currentTrack?.filePath,
                 albumId: playerState.currentTrack?.albumId,
                 size: 280,
                 borderRadius: 16,

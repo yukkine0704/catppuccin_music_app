@@ -1,13 +1,58 @@
+import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:audio_metadata_reader/audio_metadata_reader.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:photo_manager/photo_manager.dart';
 
 /// Cache for storing artwork bytes in memory.
-/// Key: albumId (int), Value: artwork bytes
-final _artworkCache = <int, Uint8List>{};
+/// Key: filePath (String) or albumId (int), Value: artwork bytes
+final _artworkCache = <String, Uint8List>{};
 
-/// Provider for loading album artwork by albumId.
+/// Provider for loading album artwork by filePath using audio_metadata_reader.
+/// This is the preferred method as it extracts embedded album art from the file.
+///
+/// Returns:
+/// - `null` if filePath is null or artwork not found
+/// - `Uint8List` bytes of the artwork image
+final albumArtFromFileProvider = FutureProvider.family<Uint8List?, String?>((
+  ref,
+  filePath,
+) async {
+  if (filePath == null || filePath.isEmpty) return null;
+
+  // Check cache first
+  if (_artworkCache.containsKey(filePath)) {
+    return _artworkCache[filePath];
+  }
+
+  try {
+    final file = File(filePath);
+    if (!file.existsSync()) return null;
+
+    // Extract metadata with image
+    final metadata = readMetadata(file, getImage: true);
+
+    // Get the first picture (usually the front cover)
+    if (metadata.pictures.isNotEmpty) {
+      final picture = metadata.pictures.first;
+      final bytes = picture.bytes;
+
+      if (bytes.isNotEmpty) {
+        // Store in cache
+        _artworkCache[filePath] = bytes;
+        return bytes;
+      }
+    }
+
+    return null;
+  } catch (e) {
+    // Artwork not available for this file
+    return null;
+  }
+});
+
+/// Provider for loading album artwork by albumId (legacy method using photo_manager).
 /// Uses photo_manager to fetch artwork dynamically.
 ///
 /// Returns:
@@ -16,9 +61,12 @@ final _artworkCache = <int, Uint8List>{};
 final albumArtProvider = FutureProvider.family<Uint8List?, int?>((ref, albumId) async {
   if (albumId == null) return null;
 
+  // Convert int albumId to string for cache
+  final cacheKey = 'albumId_$albumId';
+
   // Check cache first
-  if (_artworkCache.containsKey(albumId)) {
-    return _artworkCache[albumId];
+  if (_artworkCache.containsKey(cacheKey)) {
+    return _artworkCache[cacheKey];
   }
 
   try {
@@ -52,7 +100,7 @@ final albumArtProvider = FutureProvider.family<Uint8List?, int?>((ref, albumId) 
 
           if (bytes != null && bytes.isNotEmpty) {
             // Store in cache
-            _artworkCache[albumId] = bytes;
+            _artworkCache[cacheKey] = bytes;
             return bytes;
           }
         }

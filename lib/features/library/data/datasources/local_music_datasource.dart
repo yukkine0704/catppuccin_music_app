@@ -1,4 +1,5 @@
 
+import 'package:audio_metadata_reader/audio_metadata_reader.dart';
 import 'package:dartz/dartz.dart';
 import 'package:flutter/foundation.dart';
 import 'package:photo_manager/photo_manager.dart';
@@ -26,17 +27,6 @@ class LocalMusicDatasource {
         ),
       ),
     );
-
-    // Preventive logs para verificar el estado del permiso
-    debugPrint(
-      'PhotoManager permission state - isAuth: ${ps.isAuth}, '
-      'hasAccess: ${ps.hasAccess}',
-    );
-
-    // Verificación adicional del estado - ambos métodos deben verificar acceso
-    if (!ps.isAuth && !ps.hasAccess) {
-      debugPrint('ADVERTENCIA: Permiso de audio no concedido. Estado: $ps');
-    }
 
     return ps.isAuth || ps.hasAccess;
   }
@@ -100,54 +90,46 @@ class LocalMusicDatasource {
       for (var i = 0; i < audioAssets.length; i++) {
         final asset = audioAssets[i];
 
-        // DEBUG: Log all available properties from AssetEntity to diagnose metadata issue
-        debugPrint('=== DEBUG: AssetEntity Properties ===');
         debugPrint('Asset ID: ${asset.id}');
         debugPrint('Asset title: ${asset.title}');
         debugPrint('Asset duration: ${asset.duration}');
         debugPrint('Asset createDateTime: ${asset.createDateTime}');
-        debugPrint('Asset relativePath: ${asset.relativePath}');
-        debugPrint('Asset width: ${asset.width}');
-        debugPrint('Asset height: ${asset.height}');
-        debugPrint('Asset mimeType: ${asset.mimeType}');
-        // Check if there are any other properties we might be missing
-        debugPrint('Asset hashCode: ${asset.hashCode}');
-        debugPrint('=======================================');
 
         // Obtenemos el archivo físico para sacar la ruta
         final file = await asset.file;
 
         if (file != null) {
-          // DEBUG: Log file info
-          debugPrint('DEBUG: File path: ${file.path}');
-          debugPrint('DEBUG: File exists: ${file.existsSync()}');
+          // Extraer metadatos ID3 usando audio_metadata_reader
+          // No cargamos imágenes aquí (getImage: false) - se cargan lazily en el widget
+          // readMetadata es síncrono, no retorna Future
+          AudioMetadata? metadata;
+          try {
+            metadata = readMetadata(file, getImage: false);
+          } catch (e) {
+            // Si falla la extracción de metadatos, usamos los valores por defecto
+          }
 
-          // DEBUG: Log what we're setting for artist and album
-          // Nota: photo_manager no lee etiquetas ID3 (Artista/Álbum) nativamente.
-          // Estos datos base te permitirán arrancar.
-          debugPrint(
-            'DEBUG: Setting artist=Artista Desconocido, album=Álbum Desconocido for: ${asset.title}',
-          );
-
-          // DEBUG: Log the relativePath hash being used as albumId
-          debugPrint(
-            'DEBUG: Using albumId from relativePath hash: ${asset.relativePath?.hashCode}',
-          );
+          // Valores con fallback: usa metadata ID3, luego asset.title, luego默认值
+          final trackTitle =
+              metadata?.title ?? asset.title ?? 'Pista sin título';
+          final trackArtist = metadata?.artist ?? 'Artista Desconocido';
+          final trackAlbum = metadata?.album ?? 'Álbum Desconocido';
+          final trackYear = metadata?.year?.year ?? asset.createDateTime.year;
 
           tracks.add(
             Track(
               // Convertimos el ID String del sistema a int, o usamos el hashCode como fallback
               id: int.tryParse(asset.id) ?? asset.id.hashCode,
-              title: asset.title ?? 'Pista sin título',
-              artist: 'Artista Desconocido',
-              album: 'Álbum Desconocido',
+              title: trackTitle,
+              artist: trackArtist,
+              album: trackAlbum,
               filePath: file.path,
               // photo_manager devuelve la duración en segundos, la pasamos a ms
               duration: asset.duration * 1000,
               // Usamos el hash de la ruta relativa (carpeta) para agrupar álbumes temporalmente
               albumId: asset.relativePath?.hashCode,
               genre: null,
-              year: asset.createDateTime.year,
+              year: trackYear,
               trackNumber: null,
               dateAdded: asset.createDateTime.millisecondsSinceEpoch ~/ 1000,
             ),

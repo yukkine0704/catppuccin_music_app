@@ -238,6 +238,7 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
                   height: clampedAlbumSize + 40,
                   child: Center(
                     child: AlbumArtWidget(
+                      filePath: playerState.currentTrack?.filePath,
                       albumId: playerState.currentTrack?.albumId,
                       size: clampedAlbumSize,
                       borderRadius: 16 + (value * 18),
@@ -583,6 +584,7 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: AlbumArtWidget(
+                    filePath: nextTrack.filePath,
                     albumId: nextTrack.albumId,
                     size: 56,
                     borderRadius: 8,

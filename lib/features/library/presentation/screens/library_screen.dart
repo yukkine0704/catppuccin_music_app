@@ -201,6 +201,7 @@ class _TrackListTile extends ConsumerWidget {
 
   Widget _buildAlbumArt() {
     return AlbumArtWidget(
+      filePath: track.filePath,
       albumId: track.albumId,
       size: 48,
       borderRadius: 8,
