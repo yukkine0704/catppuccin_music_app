@@ -16,6 +16,7 @@ class LibraryState {
   final String? error;
   final int totalFiles;
   final int processedFiles;
+  final bool isPermissionRequired;
 
   const LibraryState({
     this.tracks = const [],
@@ -23,6 +24,7 @@ class LibraryState {
     this.error,
     this.totalFiles = 0,
     this.processedFiles = 0,
+    this.isPermissionRequired = false,
   });
 
   /// Progress percentage (0.0 to 1.0)
@@ -37,6 +39,7 @@ class LibraryState {
     String? error,
     int? totalFiles,
     int? processedFiles,
+    bool? isPermissionRequired,
   }) {
     return LibraryState(
       tracks: tracks ?? this.tracks,
@@ -44,6 +47,7 @@ class LibraryState {
       error: error,
       totalFiles: totalFiles ?? this.totalFiles,
       processedFiles: processedFiles ?? this.processedFiles,
+      isPermissionRequired: isPermissionRequired ?? this.isPermissionRequired,
     );
   }
 }
@@ -61,6 +65,7 @@ class LibraryNotifier extends StateNotifier<LibraryState> {
       error: null,
       totalFiles: 0,
       processedFiles: 0,
+      isPermissionRequired: false,
     );
 
     final result = await _datasource.getAllSongs(
@@ -72,7 +77,18 @@ class LibraryNotifier extends StateNotifier<LibraryState> {
 
     result.fold(
       (failure) {
-        state = state.copyWith(isLoading: false, error: failure.message);
+        // Check if it's a permission failure
+        final isPermissionError =
+            failure.message.toLowerCase().contains('permiso') ||
+            failure.message.toLowerCase().contains('permission') ||
+            failure.message.toLowerCase().contains('denegado') ||
+            failure.message.toLowerCase().contains('denied');
+
+        state = state.copyWith(
+          isLoading: false,
+          error: failure.message,
+          isPermissionRequired: isPermissionError,
+        );
       },
       (tracks) {
         state = state.copyWith(tracks: tracks, isLoading: false);

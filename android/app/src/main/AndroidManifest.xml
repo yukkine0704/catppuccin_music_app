@@ -10,9 +10,10 @@
     <application
         android:label="catppuccin_music_app"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
-        <activity
-            android:name=".MainActivity"
+        android:icon="@mipmap/ic_launcher"
+        android:requestLegacyExternalStorage="true">
+<activity
+            android:name="com.ryanheise.audioservice.AudioServiceActivity"
             android:exported="true"
             android:launchMode="singleTop"
             android:taskAffinity=""

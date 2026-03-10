@@ -1,8 +1,7 @@
-import 'package:app_bar_m3e/app_bar_m3e.dart';
 import 'package:catppuccin_flutter/catppuccin_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:icon_button_m3e/icon_button_m3e.dart';
+import 'package:m3e_collection/m3e_collection.dart';
 
 import '../../../../shared/widgets/album_art_widget.dart';
 import '../../../audio_player/presentation/providers/audio_player_provider.dart';
@@ -26,6 +25,7 @@ class _HomeContentScreenState extends ConsumerState<HomeContentScreen> {
     viewportFraction: 0.85,
   );
   int _currentCarouselPage = 0;
+  bool _hasLoadedSongs = false;
 
   // Mock data for recently played
   final List<Map<String, String>> _recentlyPlayedData = [
@@ -38,6 +38,29 @@ class _HomeContentScreenState extends ConsumerState<HomeContentScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    // Lazy loading: trigger music scanning after the widget is built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadSongsIfNeeded();
+    });
+  }
+
+  void _loadSongsIfNeeded() {
+    // Check if mounted to avoid state updates on disposed widget
+    if (!mounted) return;
+
+    // Only load if we haven't loaded yet and not currently loading
+    final libraryState = ref.read(libraryProvider);
+    if (!_hasLoadedSongs &&
+        !libraryState.isLoading &&
+        libraryState.tracks.isEmpty) {
+      _hasLoadedSongs = true;
+      ref.read(libraryProvider.notifier).loadSongs();
+    }
+  }
+
+  @override
   void dispose() {
     _carouselController.dispose();
     super.dispose();
@@ -46,7 +69,154 @@ class _HomeContentScreenState extends ConsumerState<HomeContentScreen> {
   @override
   Widget build(BuildContext context) {
     final flavor = ref.watch(flavorProvider);
+    final libraryState = ref.watch(libraryProvider);
+    final tracks = ref.watch(filteredTracksProvider);
 
+    // Show loading state
+    if (libraryState.isLoading && tracks.isEmpty) {
+      return _buildLoadingState(flavor, libraryState);
+    }
+
+    // Show permission required state
+    if (libraryState.isPermissionRequired && tracks.isEmpty) {
+      return _buildPermissionRequiredState(flavor);
+    }
+
+    // Show empty state
+    if (tracks.isEmpty) {
+      return _buildEmptyState(flavor);
+    }
+
+    // Show normal home content
+    return _buildHomeContent(flavor);
+  }
+
+  /// Build loading state with progress indicator
+  Widget _buildLoadingState(Flavor flavor, LibraryState libraryState) {
+    return SafeArea(
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              LoadingIndicatorM3E(
+                variant: LoadingIndicatorM3EVariant.contained,
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Escaneando música...',
+                style: TextStyle(color: flavor.text, fontSize: 16),
+              ),
+              const SizedBox(height: 16),
+              if (libraryState.totalFiles > 0) ...[
+                LinearProgressIndicatorM3E(value: libraryState.progress),
+                const SizedBox(height: 8),
+                Text(
+                  '${libraryState.processedFiles} / ${libraryState.totalFiles} archivos',
+                  style: TextStyle(color: flavor.subtext1, fontSize: 14),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Build permission required state with retry button
+  Widget _buildPermissionRequiredState(Flavor flavor) {
+    return SafeArea(
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.folder_off_rounded, size: 64, color: flavor.yellow),
+              const SizedBox(height: 24),
+              Text(
+                'Permiso requerido',
+                style: TextStyle(
+                  color: flavor.text,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Se necesita acceso a los archivos de audio para mostrar tu música.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: flavor.subtext1, fontSize: 14),
+              ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: _retryPermission,
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Solicitar permiso'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: flavor.mauve,
+                  foregroundColor: flavor.text,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Retry permission request
+  void _retryPermission() {
+    ref.read(libraryProvider.notifier).loadSongs();
+  }
+
+  /// Build empty state when no music is found
+  Widget _buildEmptyState(Flavor flavor) {
+    return SafeArea(
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.music_off_rounded, size: 64, color: flavor.subtext1),
+              const SizedBox(height: 24),
+              Text(
+                'No hay canciones',
+                style: TextStyle(
+                  color: flavor.text,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Añade música a tu dispositivo y vuelve a escanear.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: flavor.subtext1, fontSize: 14),
+              ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: () {
+                  ref.read(libraryProvider.notifier).refresh();
+                },
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Escanear de nuevo'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: flavor.mauve,
+                  foregroundColor: flavor.text,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Build the main home content
+  Widget _buildHomeContent(Flavor flavor) {
     return SafeArea(
       child: CustomScrollView(
         slivers: [

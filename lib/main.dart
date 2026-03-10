@@ -13,56 +13,44 @@ import 'features/settings/presentation/providers/flavor_provider.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  debugPrint('[MAIN] Starting app initialization...');
+  // Singleton Protection: Only register if not already registered by audio isolate
+  if (!getIt.isRegistered<AudioPlayer>()) {
+    debugPrint('[MAIN] Initializing dependencies for the first time...');
+    await initializeDependencies();
+  }
 
-  // Initialize dependencies
-  debugPrint('[MAIN] Initializing dependencies...');
-  await initializeDependencies();
-  debugPrint('[MAIN] Dependencies initialized');
-
-  debugPrint('[MAIN] Initializing Google Fonts cache...');
-  // Pre-load Google Fonts to trigger cache initialization before widget tree builds
-  // This prevents SQLite database lock when theme builds
+  // Google Fonts Cache (lightweight, runs in main isolate)
   try {
-    // Just calling the font function triggers cache initialization
     GoogleFonts.lexend();
-    debugPrint('[MAIN] Google Fonts cache initialized');
-  } catch (e) {
-    debugPrint('[MAIN] Google Fonts initialization warning: $e');
+  } catch (_) {}
+
+  // Initialize AudioService and capture the resulting handler
+  // AudioService.init must be called after Flutter engine is ready
+  final audioHandler = await AudioService.init(
+    builder: () => AudioPlayerService(getIt<AudioPlayer>()),
+    config: const AudioServiceConfig(
+      androidNotificationChannelId:
+          'com.example.catppuccin_music_app.channel.audio',
+      androidNotificationChannelName: 'The Vinyl Sanctuary',
+      androidNotificationOngoing: true,
+      androidStopForegroundOnPause: true,
+    ),
+  );
+
+  // Register AudioHandler as Singleton for global access
+  // This ensures we always get the same handler that AudioService is using
+  if (!getIt.isRegistered<AudioHandler>()) {
+    getIt.registerSingleton<AudioHandler>(audioHandler);
   }
 
-  debugPrint('[MAIN] Starting audio service...');
-  // Start audio service with error handling
-  // Using Future.delayed to ensure Flutter engine is fully ready
-  try {
-    await Future.delayed(const Duration(milliseconds: 500));
-    await AudioService.init(
-      builder: () => AudioPlayerService(AudioPlayer()),
-      config: const AudioServiceConfig(
-        androidNotificationChannelId:
-            'com.example.catppuccin_music_app.channel.audio',
-        androidNotificationChannelName: 'The Vinyl Sanctuary',
-        androidNotificationOngoing: true,
-        androidShowNotificationBadge: true,
-      ),
-    );
-    debugPrint('[MAIN] Audio service initialized successfully');
-  } catch (e, stack) {
-    debugPrint('[MAIN] Audio service initialization failed (non-fatal): $e');
-    debugPrint('[MAIN] Stack: $stack');
-  }
-
-  debugPrint('[MAIN] Audio service initialized, running app...');
   runApp(const ProviderScope(child: TheVinylSanctuaryApp()));
 }
 
-/// Main application widget.
 class TheVinylSanctuaryApp extends ConsumerWidget {
   const TheVinylSanctuaryApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Watch the flavor provider to rebuild theme when it changes
     final flavor = ref.watch(flavorProvider);
     final theme = CatppuccinTheme.buildTheme(flavor);
 
@@ -70,8 +58,6 @@ class TheVinylSanctuaryApp extends ConsumerWidget {
       title: 'The Vinyl Sanctuary',
       debugShowCheckedModeBanner: false,
       theme: theme,
-      darkTheme: theme,
-      themeMode: ThemeMode.dark,
       home: const HomeScreen(),
     );
   }
