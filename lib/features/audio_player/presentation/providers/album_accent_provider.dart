@@ -98,13 +98,14 @@ class AlbumAccentNotifier extends StateNotifier<AlbumAccentState> {
       );
 
       if (albumArt != null && albumArt.hasArtwork) {
-        // Colors were extracted when we got the artwork
-        if (albumArt.accentColor != null) {
+        // Use accentColor if available, otherwise use dominantColor
+        final color = albumArt.accentColor ?? albumArt.dominantColor;
+        if (color != null) {
           debugPrint(
-            '[AlbumAccentProvider] Using album accent color: ${albumArt.accentColor}',
+            '[AlbumAccentProvider] Using album color: $color',
           );
           state = AlbumAccentState(
-            accentColor: albumArt.accentColor!,
+            accentColor: color,
             useAlbumColors: true,
             useGenreColors: false,
             isLoading: false,

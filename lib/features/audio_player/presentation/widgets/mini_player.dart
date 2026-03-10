@@ -4,9 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:icon_button_m3e/icon_button_m3e.dart';
 
 import '../../../../shared/widgets/album_art_widget.dart';
+import '../../../../shared/widgets/album_theme_wrapper.dart';
 import '../../../settings/presentation/providers/flavor_provider.dart';
 import '../providers/album_accent_provider.dart';
 import '../providers/audio_player_provider.dart';
+import '../providers/player_theme_provider.dart';
 
 /// Mini player widget displayed at the bottom of the screen above navigation bar.
 /// Tapping it opens the full NowPlayingScreen via DraggableScrollableSheet.
@@ -23,6 +25,8 @@ class MiniPlayer extends ConsumerWidget {
     final flavor = ref.watch(flavorProvider);
     final playerState = ref.watch(audioPlayerProvider);
     final accentState = ref.watch(albumAccentProvider);
+    final themeState = ref.watch(playerThemeProvider);
+
     final accentColor = accentState.useAlbumColors || accentState.useGenreColors
         ? accentState.accentColor
         : flavor.mauve;
@@ -45,13 +49,26 @@ class MiniPlayer extends ConsumerWidget {
             .clamp(0.0, 1.0)
         : 0.0;
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
+    // Use album palette surface if active, otherwise use flavor surface
+    final containerColor =
+        themeState.isAlbumPaletteActive && themeState.albumColorScheme != null
+        ? themeState.albumColorScheme!.surfaceContainerHighest
+        : flavor.surface0;
+
+    // Subtle border with accent when album palette is active
+    final borderColor = themeState.isAlbumPaletteActive
+        ? themeState.currentAccentColor.withValues(alpha: 0.3)
+        : Colors.transparent;
+
+    return AlbumThemeWrapper(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: flavor.surface0,
+            color: containerColor,
           borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: borderColor, width: 1),
           boxShadow: [
             BoxShadow(
               color: flavor.crust.withValues(alpha: 0.2),
@@ -109,50 +126,77 @@ class MiniPlayer extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  // Control buttons with rounded backgrounds
-                  // Skip previous button
-                  IconButtonM3E(
-                    variant: IconButtonM3EVariant.tonal,
-                    size: IconButtonM3ESize.sm,
-                    icon: Icon(
-                      Icons.skip_previous_rounded,
-                      color: flavor.crust,
-                    ),
-                    onPressed: () {
-                      ref.read(audioPlayerProvider.notifier).skipToPrevious();
-                    },
-                    tooltip: 'Anterior',
-                  ),
-                  // Play/Pause button
-                  IconButtonM3E(
-                    variant: IconButtonM3EVariant.filled,
-                    size: IconButtonM3ESize.sm,
-                    icon: Icon(
-                      playerState.isPlaying
-                          ? Icons.pause_rounded
-                          : Icons.play_arrow_rounded,
-                      color: flavor.crust,
-                    ),
-                    onPressed: () {
-                      ref.read(audioPlayerProvider.notifier).togglePlayPause();
-                    },
-                    tooltip: playerState.isPlaying ? 'Pausar' : 'Reproducir',
-                  ),
-                  // Skip next button
-                  IconButtonM3E(
-                    variant: IconButtonM3EVariant.tonal,
-                    size: IconButtonM3ESize.sm,
-                    icon: Icon(Icons.skip_next_rounded, color: flavor.crust),
-                    onPressed: () {
-                      ref.read(audioPlayerProvider.notifier).skipToNext();
-                    },
-                    tooltip: 'Siguiente',
+                    // Wrap buttons in Theme to override primary for filled variant
+                    Theme(
+                      data: Theme.of(context).copyWith(
+                        colorScheme: Theme.of(context).colorScheme.copyWith(
+                          primary: accentColor,
+                          onPrimary: accentColor.computeLuminance() > 0.5
+                              ? Colors.black
+                              : Colors.white,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Skip previous button
+                          IconButtonM3E(
+                            variant: IconButtonM3EVariant.tonal,
+                            size: IconButtonM3ESize.sm,
+                            icon: Icon(
+                              Icons.skip_previous_rounded,
+                              color: flavor.crust,
+                            ),
+                            onPressed: () {
+                              ref
+                                  .read(audioPlayerProvider.notifier)
+                                  .skipToPrevious();
+                            },
+                            tooltip: 'Anterior',
+                          ),
+                          // Play/Pause button
+                          IconButtonM3E(
+                            variant: IconButtonM3EVariant.filled,
+                            size: IconButtonM3ESize.sm,
+                            icon: Icon(
+                              playerState.isPlaying
+                                  ? Icons.pause_rounded
+                                  : Icons.play_arrow_rounded,
+                              color: flavor.crust,
+                            ),
+                            onPressed: () {
+                              ref
+                                  .read(audioPlayerProvider.notifier)
+                                  .togglePlayPause();
+                            },
+                            tooltip: playerState.isPlaying
+                                ? 'Pausar'
+                                : 'Reproducir',
+                          ),
+                          // Skip next button
+                          IconButtonM3E(
+                            variant: IconButtonM3EVariant.tonal,
+                            size: IconButtonM3ESize.sm,
+                            icon: Icon(
+                              Icons.skip_next_rounded,
+                              color: flavor.crust,
+                            ),
+                            onPressed: () {
+                              ref
+                                  .read(audioPlayerProvider.notifier)
+                                  .skipToNext();
+                            },
+                            tooltip: 'Siguiente',
+                          ),
+                        ],
+                      ),
                   ),
                 ],
               ),
             ),
           ],
         ),
+      ),
       ),
     );
   }

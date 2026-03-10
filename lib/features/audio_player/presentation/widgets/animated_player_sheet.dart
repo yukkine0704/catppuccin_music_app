@@ -9,10 +9,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:icon_button_m3e/icon_button_m3e.dart';
 
 import '../../../../shared/widgets/album_art_widget.dart';
+import '../../../../shared/widgets/album_theme_wrapper.dart';
 import '../../../settings/presentation/providers/flavor_provider.dart';
 import '../providers/album_accent_provider.dart';
 import '../providers/audio_player_provider.dart';
 import '../providers/player_animation_provider.dart';
+import '../providers/player_theme_provider.dart';
 import 'queue_bottom_sheet.dart';
 
 /// Animated player sheet with spring physics for smooth transitions
@@ -128,25 +130,35 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
   Widget build(BuildContext context) {
     final flavor = ref.watch(flavorProvider);
     final playerState = ref.watch(audioPlayerProvider);
-    // Watch the animation style preference
     final animationStyle = ref.watch(playerAnimationStyleProvider);
+    final themeState = ref.watch(playerThemeProvider);
 
-    return Scaffold(
-      backgroundColor: flavor.base,
-      body: GestureDetector(
-        onVerticalDragStart: _handleDragStart,
-        onVerticalDragUpdate: _handleDragUpdate,
-        onVerticalDragEnd: _handleDragEnd,
-        child: AnimatedBuilder(
-          animation: _controller,
-          builder: (context, child) {
-            return _buildContent(
-              flavor,
-              playerState,
-              _controller.value,
-              animationStyle,
-            );
-          },
+    // Use album palette background if active, otherwise use flavor base
+    final backgroundColor =
+        themeState.isAlbumPaletteActive && themeState.albumColorScheme != null
+        ? themeState.albumColorScheme!.surface
+        : flavor.base;
+
+    return AlbumThemeWrapper(
+      child: Scaffold(
+        backgroundColor: backgroundColor,
+        body: GestureDetector(
+          onVerticalDragStart: _handleDragStart,
+          onVerticalDragUpdate: _handleDragUpdate,
+          onVerticalDragEnd: _handleDragEnd,
+          child: AnimatedBuilder(
+            animation: _controller,
+            builder: (context, child) {
+              return _buildContent(
+                flavor,
+                playerState,
+                _controller.value,
+                animationStyle,
+                backgroundColor,
+                themeState,
+              );
+            },
+          ),
         ),
       ),
     );
@@ -157,13 +169,15 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
     PlayerState playerState,
     double value,
     PlayerAnimationStyle animationStyle,
+    Color backgroundColor,
+    PlayerThemeState themeState,
   ) {
     // Interpolate border radius based on expansion
     final borderRadius = 16 + (value * 12);
 
     return Container(
       decoration: BoxDecoration(
-        color: flavor.base,
+        color: backgroundColor,
         borderRadius: BorderRadius.vertical(top: Radius.circular(borderRadius)),
       ),
       child: SafeArea(
@@ -190,6 +204,8 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
                 playerState,
                 value,
                 animationStyle,
+                backgroundColor,
+                themeState,
               ),
             ),
           ],
@@ -203,6 +219,8 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
     PlayerState playerState,
     double value,
     PlayerAnimationStyle animationStyle,
+    Color backgroundColor,
+    PlayerThemeState themeState,
   ) {
     // DEBUG: Log track info when building expanded content
     debugPrint('=== DEBUG UI: _buildExpandedContent ===');
@@ -443,64 +461,80 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
   Widget _buildControlPanel(PlayerState state, Flavor flavor, double value) {
     final notifier = ref.read(audioPlayerProvider.notifier);
     final accentState = ref.watch(albumAccentProvider);
-    final accentColor = accentState.useAlbumColors || accentState.useGenreColors
-        ? accentState.accentColor
-        : flavor.mauve;
+    final themeState = ref.watch(playerThemeProvider);
+
+    // Use themeState for full palette, fallback to accentState
+    final accentColor =
+        themeState.isAlbumPaletteActive && themeState.albumColorScheme != null
+        ? themeState.currentAccentColor
+        : (accentState.useAlbumColors || accentState.useGenreColors
+              ? accentState.accentColor
+              : flavor.mauve);
 
     debugPrint(
       '[AnimatedPlayerSheet] ControlPanel - isPlaying: ${state.isPlaying}, useAlbumColors: ${accentState.useAlbumColors}, useGenreColors: ${accentState.useGenreColors}, accentColor: ${accentColor.value.toRadixString(16)}',
     );
 
-    return Column(
-      children: [
-        // Main row
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              IconButtonM3E(
-                variant: IconButtonM3EVariant.tonal,
-                size: IconButtonM3ESize.lg,
-                icon: Icon(
-                  Icons.skip_previous_rounded,
-                  color: accentColor,
-                  size: _lerp(28, 36, value),
-                ),
-                onPressed: () => notifier.skipToPrevious(),
-                tooltip: 'Previous',
-              ),
-              // Play/Pause button - M3E morphing IconButtonM3E
-              // Uses filled variant when playing (heroic moment), tonal when paused
-              // Using isSelected for proper morphing behavior with centered icon
-              IconButtonM3E(
-                variant: state.isPlaying
-                    ? IconButtonM3EVariant.filled
-                    : IconButtonM3EVariant.tonal,
-                size: IconButtonM3ESize.lg,
-                icon: Icon(
-                  state.isPlaying
-                      ? Icons.pause_rounded
-                      : Icons.play_arrow_rounded,
-                  color: accentColor,
-                  size: _lerp(32, 40, value),
-                ),
-                onPressed: () => notifier.togglePlayPause(),
-              ),
-              IconButtonM3E(
-                variant: IconButtonM3EVariant.tonal,
-                size: IconButtonM3ESize.lg,
-                icon: Icon(
-                  Icons.skip_next_rounded,
-                  color: accentColor,
-                  size: _lerp(28, 36, value),
-                ),
-                onPressed: () => notifier.skipToNext(),
-                tooltip: 'Next',
-              ),
-            ],
-          ),
+    // Wrap in Theme to ensure filled buttons use accent color
+    return Theme(
+      data: Theme.of(context).copyWith(
+        colorScheme: Theme.of(context).colorScheme.copyWith(
+          primary: accentColor,
+          onPrimary: accentColor.computeLuminance() > 0.5
+              ? Colors.black
+              : Colors.white,
         ),
+      ),
+      child: Column(
+        children: [
+          // Main row
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                IconButtonM3E(
+                  variant: IconButtonM3EVariant.tonal,
+                  size: IconButtonM3ESize.lg,
+                  icon: Icon(
+                    Icons.skip_previous_rounded,
+                    color: accentColor,
+                    size: _lerp(28, 36, value),
+                  ),
+                  onPressed: () => notifier.skipToPrevious(),
+                  tooltip: 'Previous',
+                ),
+                // Play/Pause button - M3E morphing IconButtonM3E
+                // Uses filled variant when playing (heroic moment), tonal when paused
+                // Using isSelected for proper morphing behavior with centered icon
+                IconButtonM3E(
+                  variant: state.isPlaying
+                      ? IconButtonM3EVariant.filled
+                      : IconButtonM3EVariant.tonal,
+                  size: IconButtonM3ESize.lg,
+                  icon: Icon(
+                    state.isPlaying
+                        ? Icons.pause_rounded
+                        : Icons.play_arrow_rounded,
+                    color: accentColor,
+                    size: _lerp(32, 40, value),
+                  ),
+                  onPressed: () => notifier.togglePlayPause(),
+                ),
+                IconButtonM3E(
+                  variant: IconButtonM3EVariant.tonal,
+                  size: IconButtonM3ESize.lg,
+                  icon: Icon(
+                    Icons.skip_next_rounded,
+                    color: accentColor,
+                    size: _lerp(28, 36, value),
+                  ),
+                  onPressed: () => notifier.skipToNext(),
+                  tooltip: 'Next',
+                ),
+              ],
+            ),
+          ),
 
         const SizedBox(height: 32),
 
@@ -521,7 +555,7 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
                     Icons.shuffle_rounded,
                     size: 22,
                     color: state.shuffleEnabled
-                        ? flavor.mauve
+                          ? accentColor
                         : flavor.subtext1,
                   ),
                   selected: state.shuffleEnabled,
@@ -534,7 +568,7 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
                         : Icons.repeat_rounded,
                     size: 22,
                     color: state.repeatMode != PlayerRepeatMode.off
-                        ? flavor.mauve
+                          ? accentColor
                         : flavor.subtext1,
                   ),
                   selected: state.repeatMode != PlayerRepeatMode.off,
@@ -558,6 +592,7 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
         // Next track section
         _buildNextTrackSection(state, flavor),
       ],
+      ),
     );
   }
 
