@@ -316,7 +316,6 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
     final isPlaying = playerState.isPlaying;
 
     if (animationStyle == PlayerAnimationStyle.vinyl) {
-      // Vinyl animation style - show rotating vinyl record
       return albumArtAsync.when(
         data: (albumArt) => _VinylAnimationWidget(
           albumArt: albumArt,
@@ -332,7 +331,8 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
           borderRadius: 16 + (value * 18),
           isPlaying: isPlaying,
         ),
-        error: (_, __) => _VinylAnimationWidget(
+        // CORRECCIÓN: Eliminamos la advertencia de guiones bajos innecesarios
+        error: (err, stack) => _VinylAnimationWidget(
           albumArt: null,
           flavor: flavor,
           size: size,
@@ -341,7 +341,6 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
         ),
       );
     } else {
-      // Simple animation style - show standard album art
       return AlbumArtWidget(
         filePath: playerState.currentTrack?.filePath,
         albumId: playerState.currentTrack?.albumId,
@@ -521,91 +520,81 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
 
 Widget _buildControlPanel(PlayerState state, Flavor flavor, double value) {
     final notifier = ref.read(audioPlayerProvider.notifier);
+
+    // 1. Forzamos la escucha de los mismos proveedores que el MiniPlayer
     final accentState = ref.watch(albumAccentProvider);
     final themeState = ref.watch(playerThemeProvider);
 
-    // Use themeState for full palette, fallback to accentState
-    final accentColor =
-        themeState.isAlbumPaletteActive && themeState.albumColorScheme != null
-        ? themeState.currentAccentColor
-        : (accentState.useAlbumColors || accentState.useGenreColors
-              ? accentState.accentColor
-              : flavor.mauve);
+    // 2. Lógica idéntica al MiniPlayer que sí funciona
+    final Color accentColor =
+        (accentState.useAlbumColors || accentState.useGenreColors)
+        ? accentState.accentColor
+        : flavor.mauve;
 
-    // CORRECCIÓN: Usamos .toARGB32() en lugar del .value deprecado
+    // 3. Log para confirmar que la hoja está recibiendo el color
     debugPrint(
-      '[AnimatedPlayerSheet] ControlPanel - isPlaying: ${state.isPlaying}, useAlbumColors: ${accentState.useAlbumColors}, useGenreColors: ${accentState.useGenreColors}, accentColor: ${accentColor.toARGB32().toRadixString(16)}',
+      '[AnimatedPlayerSheet] Color Aplicado: #${accentColor.toARGB32().toRadixString(16)}',
     );
 
-    // CORRECCIÓN: Definimos onAccentColor aquí para que el Theme lo pueda usar
     final onAccentColor = accentColor.computeLuminance() > 0.5
         ? Colors.black
         : Colors.white;
 
-    // Wrap in Theme to ensure filled buttons use accent color
-    return Theme(
-      data: Theme.of(context).copyWith(
-        colorScheme: Theme.of(context).colorScheme.copyWith(
-          primary: accentColor,
-          onPrimary: onAccentColor,
-          secondaryContainer: accentColor.withValues(alpha: 0.2),
-          onSecondaryContainer: accentColor,
-          secondary: accentColor,
-          onSecondary: onAccentColor,
-        ),
-      ),
-      child: Column(
-        children: [
-          // Main row
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                IconButtonM3E(
-                  variant: IconButtonM3EVariant.tonal,
-                  size: IconButtonM3ESize.lg,
-                  icon: Icon(
-                    Icons.skip_previous_rounded,
-                    color: accentColor,
-                    size: _lerp(28, 36, value),
-                  ),
-                  onPressed: () => notifier.skipToPrevious(),
-                  tooltip: 'Previous',
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              // Skip Previous
+              IconButtonM3E(
+                variant: IconButtonM3EVariant.tonal,
+                size: IconButtonM3ESize.lg,
+                icon: Icon(
+                  Icons.skip_previous_rounded,
+                  color: accentColor, // FORZADO
+                  size: _lerp(28, 36, value),
                 ),
-                // Play/Pause button
-                IconButtonM3E(
-                  variant: state.isPlaying
-                      ? IconButtonM3EVariant.filled
-                      : IconButtonM3EVariant.tonal,
-                  size: IconButtonM3ESize.lg,
-                  icon: Icon(
-                    state.isPlaying
-                        ? Icons.pause_rounded
-                        : Icons.play_arrow_rounded,
-                    color: accentColor,
-                    size: _lerp(32, 40, value),
-                  ),
-                  onPressed: () => notifier.togglePlayPause(),
+                onPressed: () => notifier.skipToPrevious(),
+              ),
+
+              // Play/Pause
+              IconButtonM3E(
+                variant: state.isPlaying
+                    ? IconButtonM3EVariant.filled
+                    : IconButtonM3EVariant.tonal,
+                size: IconButtonM3ESize.lg,
+                icon: Icon(
+                  state.isPlaying
+                      ? Icons.pause_rounded
+                      : Icons.play_arrow_rounded,
+                  color: state.isPlaying
+                      ? onAccentColor
+                      : accentColor, // FORZADO
+                  size: _lerp(32, 40, value),
                 ),
-                IconButtonM3E(
-                  variant: IconButtonM3EVariant.tonal,
-                  size: IconButtonM3ESize.lg,
-                  icon: Icon(
-                    Icons.skip_next_rounded,
-                    color: accentColor,
-                    size: _lerp(28, 36, value),
-                  ),
-                  onPressed: () => notifier.skipToNext(),
-                  tooltip: 'Next',
+                onPressed: () => notifier.togglePlayPause(),
+              ),
+
+              // Skip Next
+              IconButtonM3E(
+                variant: IconButtonM3EVariant.tonal,
+                size: IconButtonM3ESize.lg,
+                icon: Icon(
+                  Icons.skip_next_rounded,
+                  color: accentColor, // FORZADO
+                  size: _lerp(28, 36, value),
                 ),
-              ],
-            ),
+                onPressed: () => notifier.skipToNext(),
+              ),
+            ],
           ),
+        ),
 
         const SizedBox(height: 32),
 
-        // Secondary row - ButtonGroupM3E in pill container
+        // Fila de Shuffle/Repeat (Forzando colores manuales)
         Opacity(
           opacity: value,
           child: Padding(
@@ -621,9 +610,7 @@ Widget _buildControlPanel(PlayerState state, Flavor flavor, double value) {
                   label: Icon(
                     Icons.shuffle_rounded,
                     size: 22,
-                    color: state.shuffleEnabled
-                          ? accentColor
-                        : flavor.subtext1,
+                    color: state.shuffleEnabled ? accentColor : flavor.subtext1,
                   ),
                   selected: state.shuffleEnabled,
                   onPressed: () => notifier.toggleShuffle(),
@@ -635,7 +622,7 @@ Widget _buildControlPanel(PlayerState state, Flavor flavor, double value) {
                         : Icons.repeat_rounded,
                     size: 22,
                     color: state.repeatMode != PlayerRepeatMode.off
-                          ? accentColor
+                        ? accentColor
                         : flavor.subtext1,
                   ),
                   selected: state.repeatMode != PlayerRepeatMode.off,
@@ -653,13 +640,9 @@ Widget _buildControlPanel(PlayerState state, Flavor flavor, double value) {
             ),
           ),
         ),
-
         const SizedBox(height: 16),
-
-        // Next track section
         _buildNextTrackSection(state, flavor),
       ],
-      ),
     );
   }
 
