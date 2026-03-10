@@ -41,7 +41,7 @@ class _MorphingPlayerState extends ConsumerState<MorphingPlayer>
 
   // Spring physics parameters - M3E Expressive scheme
   static const double _springStiffness = 350.0;
-  static const double _springDamping = 15.0;
+  static const double _springDamping = 25.0;
 
   // State for UI toggle (favorite is not in player state)
   bool _isFavorite = false;

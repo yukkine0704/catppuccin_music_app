@@ -44,21 +44,18 @@ class AlbumArtSection extends ConsumerWidget {
           albumArt: albumArt,
           flavor: flavor,
           size: size,
-          borderRadius: borderRadius,
           isPlaying: isPlaying,
         ),
         loading: () => VinylAnimation(
           albumArt: null,
           flavor: flavor,
           size: size,
-          borderRadius: borderRadius,
           isPlaying: isPlaying,
         ),
         error: (err, stack) => VinylAnimation(
           albumArt: null,
           flavor: flavor,
           size: size,
-          borderRadius: borderRadius,
           isPlaying: isPlaying,
         ),
       );
