@@ -1,9 +1,9 @@
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
 import 'package:catppuccin_flutter/catppuccin_flutter.dart';
 import 'package:dartz/dartz.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/error/failures.dart';
@@ -64,32 +64,57 @@ class ArtworkRepository {
     String? filePath,
     Flavor flavor,
   ) async {
+    debugPrint(
+      '[ArtworkRepository] getAlbumArtWithColors - filePath: $filePath, flavor: $flavor',
+    );
+
     final bytesResult = await getArtworkFromFile(filePath);
 
-    return bytesResult.fold((failure) => Left(failure), (bytes) async {
-      if (bytes == null || bytes.isEmpty) {
-        return const Right(AlbumArt(bytes: null));
-      }
+    // Use synchronous fold - cannot use async here
+    final AlbumArt result;
 
-      // Extract colors lazily
-      final dominantColor = await AlbumColorExtractor.extractDominantColor(
-        bytes,
+    if (bytesResult.isLeft()) {
+      final failure = bytesResult.fold((l) => l, (_) => null);
+      debugPrint('[ArtworkRepository] Error getting bytes: $failure');
+      return Left(failure ?? DatabaseFailure('Unknown error'));
+    }
+
+    final bytes = bytesResult.fold((_) => null, (b) => b);
+
+    if (bytes == null || bytes.isEmpty) {
+      debugPrint('[ArtworkRepository] No artwork bytes found for: $filePath');
+      return const Right(AlbumArt(bytes: null));
+    }
+
+    debugPrint(
+      '[ArtworkRepository] Found artwork bytes: ${bytes.length} bytes',
+    );
+
+    // Extract colors lazily
+    final dominantColor = await AlbumColorExtractor.extractDominantColor(bytes);
+
+    debugPrint('[ArtworkRepository] Dominant color extracted: $dominantColor');
+
+    Color? accentColor;
+    if (dominantColor != null &&
+        AlbumColorExtractor.isColorful(dominantColor)) {
+      accentColor = AlbumColorMapper.findClosestAccent(dominantColor, flavor);
+      debugPrint(
+        '[ArtworkRepository] Accent color found: $accentColor (from $dominantColor)',
       );
-
-      Color? accentColor;
-      if (dominantColor != null &&
-          AlbumColorExtractor.isColorful(dominantColor)) {
-        accentColor = AlbumColorMapper.findClosestAccent(dominantColor, flavor);
-      }
-
-      return Right(
-        AlbumArt(
-          bytes: bytes,
-          dominantColor: dominantColor,
-          accentColor: accentColor,
-        ),
+    } else {
+      debugPrint(
+        '[ArtworkRepository] No accent color - dominantColor: $dominantColor, isColorful: ${dominantColor != null && AlbumColorExtractor.isColorful(dominantColor)}',
       );
-    });
+    }
+
+    return Right(
+      AlbumArt(
+        bytes: bytes,
+        dominantColor: dominantColor,
+        accentColor: accentColor,
+      ),
+    );
   }
 
   /// Gets accent color from genre (fallback when no artwork).

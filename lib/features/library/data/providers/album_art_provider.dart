@@ -1,6 +1,5 @@
-import 'dart:typed_data';
-
 import 'package:catppuccin_flutter/catppuccin_flutter.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:photo_manager/photo_manager.dart';
 
@@ -13,8 +12,12 @@ final artworkRepositoryProvider = Provider<ArtworkRepository>((ref) {
 });
 
 /// Cache for storing artwork bytes in memory.
-/// Key: filePath (String) or albumId (String), Value: artwork bytes
+/// Key: filePath (String), Value: artwork bytes
 final _artworkCache = <String, Uint8List>{};
+
+/// Cache for storing artwork with colors.
+/// Key: 'colors_${filePath}_${flavor.mauve.value}', Value: AlbumArt with colors
+final _artworkWithColorsCache = <String, AlbumArt>{};
 
 /// Provider for loading album artwork by filePath using audio_metadata_reader.
 /// This is the preferred method as it extracts embedded album art from the file.
@@ -126,11 +129,13 @@ final albumArtWithColorsProvider =
         return const AlbumArt(bytes: null);
       }
 
-      // Check cache first for basic artwork
-      if (_artworkCache.containsKey(filePath)) {
-        // Return cached bytes without re-extracting colors
-        // Colors will be computed on-demand by album_accent_provider
-        return AlbumArt(bytes: _artworkCache[filePath]);
+      // Check cache first for albumArt with colors (includes flavor in key)
+      final cacheKey = 'colors_${filePath}_${flavor.mauve.value}';
+      if (_artworkWithColorsCache.containsKey(cacheKey)) {
+        debugPrint(
+          '[albumArtWithColorsProvider] Returning cached result for: $filePath',
+        );
+        return _artworkWithColorsCache[cacheKey]!;
       }
 
       final repository = ref.watch(artworkRepositoryProvider);
@@ -138,10 +143,20 @@ final albumArtWithColorsProvider =
       // Use the repository method that computes colors based on flavor
       final result = await repository.getAlbumArtWithColors(filePath, flavor);
 
-      return result.fold((failure) => const AlbumArt(bytes: null), (albumArt) {
+      return result.fold(
+        (failure) {
+          debugPrint('[albumArtWithColorsProvider] Error: $failure');
+          return const AlbumArt(bytes: null);
+        },
+        (albumArt) {
         if (albumArt.bytes != null && albumArt.bytes!.isNotEmpty) {
           _artworkCache[filePath] = albumArt.bytes!;
         }
+          // Cache the result with colors
+          _artworkWithColorsCache[cacheKey] = albumArt;
+          debugPrint(
+            '[albumArtWithColorsProvider] Cached result with colors: dominant=${albumArt.dominantColor}, accent=${albumArt.accentColor}',
+          );
         return albumArt;
       });
     });

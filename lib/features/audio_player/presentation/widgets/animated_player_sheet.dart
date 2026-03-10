@@ -447,6 +447,10 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
         ? accentState.accentColor
         : flavor.mauve;
 
+    debugPrint(
+      '[AnimatedPlayerSheet] ControlPanel - isPlaying: ${state.isPlaying}, useAlbumColors: ${accentState.useAlbumColors}, useGenreColors: ${accentState.useGenreColors}, accentColor: ${accentColor.value.toRadixString(16)}',
+    );
+
     return Column(
       children: [
         // Main row
@@ -478,6 +482,7 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
                   state.isPlaying
                       ? Icons.pause_rounded
                       : Icons.play_arrow_rounded,
+                  color: accentColor,
                   size: _lerp(32, 40, value),
                 ),
                 onPressed: () => notifier.togglePlayPause(),

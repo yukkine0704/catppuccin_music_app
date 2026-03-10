@@ -27,6 +27,10 @@ class MiniPlayer extends ConsumerWidget {
         ? accentState.accentColor
         : flavor.mauve;
 
+    debugPrint(
+      '[MiniPlayer] build - isPlaying: ${playerState.isPlaying}, useAlbumColors: ${accentState.useAlbumColors}, useGenreColors: ${accentState.useGenreColors}, accentColor: ${accentColor.value.toRadixString(16)}',
+    );
+
     // Don't show mini player if no track is loaded
     if (playerState.currentTrack == null) {
       return const SizedBox.shrink();
