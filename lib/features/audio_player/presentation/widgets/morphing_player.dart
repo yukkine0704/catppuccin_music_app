@@ -17,6 +17,9 @@ import '../providers/album_accent_provider.dart';
 import '../providers/audio_player_provider.dart';
 import '../providers/player_animation_provider.dart';
 import '../providers/player_theme_provider.dart';
+import 'album_art_section.dart';
+import 'music_info_row.dart';
+import 'progress_section.dart';
 import 'queue_bottom_sheet.dart';
 
 /// Unified morphing player that transitions between mini-player and full-screen player.
@@ -530,41 +533,13 @@ class _MorphingPlayerState extends ConsumerState<MorphingPlayer>
     Flavor flavor,
     double borderRadius,
   ) {
-    final isPlaying = playerState.isPlaying;
-
-    if (animationStyle == PlayerAnimationStyle.vinyl) {
-      return albumArtAsync.when(
-        data: (albumArt) => _VinylAnimationWidget(
-          albumArt: albumArt,
-          flavor: flavor,
-          size: size,
-          borderRadius: borderRadius,
-          isPlaying: isPlaying,
-        ),
-        loading: () => _VinylAnimationWidget(
-          albumArt: null,
-          flavor: flavor,
-          size: size,
-          borderRadius: borderRadius,
-          isPlaying: isPlaying,
-        ),
-        error: (err, stack) => _VinylAnimationWidget(
-          albumArt: null,
-          flavor: flavor,
-          size: size,
-          borderRadius: borderRadius,
-          isPlaying: isPlaying,
-        ),
-      );
-    } else {
-      return AlbumArtWidget(
-        filePath: playerState.currentTrack?.filePath,
-        albumId: playerState.currentTrack?.albumId,
-        size: size,
-        borderRadius: borderRadius,
-        flavor: flavor,
-      );
-    }
+    return AlbumArtSection(
+      playerState: playerState,
+      animationStyle: animationStyle,
+      size: size,
+      borderRadius: borderRadius,
+      flavor: flavor,
+    );
   }
 
   Widget _buildMusicInfoRow(
@@ -572,57 +547,16 @@ class _MorphingPlayerState extends ConsumerState<MorphingPlayer>
     PlayerState playerState,
     double value,
   ) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  playerState.currentTrack?.title ?? 'No hay canción',
-                  style: TextStyle(
-                    color: flavor.text,
-                    fontSize: _lerp(14, 22, value),
-                    fontWeight: FontWeight.bold,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  playerState.currentTrack?.artist ?? 'Unknown Artist',
-                  style: TextStyle(
-                    color: flavor.subtext1,
-                    fontSize: _lerp(12, 16, value),
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-          IconButtonM3E(
-            variant: IconButtonM3EVariant.standard,
-            size: IconButtonM3ESize.lg,
-            icon: Icon(
-              _isFavorite
-                  ? Icons.favorite_rounded
-                  : Icons.favorite_border_rounded,
-              color: _isFavorite ? flavor.red : flavor.text,
-            ),
-            selectedIcon: Icon(Icons.favorite_rounded, color: flavor.red),
-            isSelected: _isFavorite,
-            onPressed: () {
-              setState(() {
-                _isFavorite = !_isFavorite;
-              });
-            },
-            tooltip: 'Add to favorites',
-          ),
-        ],
-      ),
+    return MusicInfoRow(
+      playerState: playerState,
+      flavor: flavor,
+      animationValue: value,
+      isFavorite: _isFavorite,
+      onFavoriteToggle: (newValue) {
+        setState(() {
+          _isFavorite = newValue;
+        });
+      },
     );
   }
 
@@ -631,54 +565,10 @@ class _MorphingPlayerState extends ConsumerState<MorphingPlayer>
     Flavor flavor,
     Color accentColor,
   ) {
-    final position = state.position;
-    final duration = state.duration.inMilliseconds > 0
-        ? state.duration
-        : const Duration(seconds: 1);
-
-    final progress = duration.inMilliseconds > 0
-        ? (position.inMilliseconds / duration.inMilliseconds).clamp(0.0, 1.0)
-        : 0.0;
-
-    return Column(
-      children: [
-        SliderTheme(
-          data: SliderThemeData(
-            trackHeight: 4,
-            activeTrackColor: accentColor,
-            inactiveTrackColor: flavor.surface1,
-            thumbColor: accentColor,
-            overlayColor: accentColor.withValues(alpha: 0.1),
-            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
-            trackShape: const RoundedRectSliderTrackShape(),
-          ),
-          child: Slider(
-            value: progress,
-            onChanged: (newValue) {
-              final seekTo = Duration(
-                milliseconds: (newValue * duration.inMilliseconds).toInt(),
-              );
-              ref.read(audioPlayerProvider.notifier).seek(seekTo);
-            },
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                _formatDuration(position),
-                style: TextStyle(color: flavor.subtext1, fontSize: 12),
-              ),
-              Text(
-                _formatDuration(duration),
-                style: TextStyle(color: flavor.subtext1, fontSize: 12),
-              ),
-            ],
-          ),
-        ),
-      ],
+    return ProgressSection(
+      playerState: state,
+      flavor: flavor,
+      accentColor: accentColor,
     );
   }
 
@@ -883,11 +773,6 @@ class _MorphingPlayerState extends ConsumerState<MorphingPlayer>
     );
   }
 
-  String _formatDuration(Duration duration) {
-    final minutes = duration.inMinutes;
-    final seconds = duration.inSeconds % 60;
-    return '$minutes:${seconds.toString().padLeft(2, '0')}';
-  }
 }
 
 /// Vinyl animation widget for the player.
