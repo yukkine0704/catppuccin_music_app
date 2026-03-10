@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:button_group_m3e/button_group_m3e.dart';
 import 'package:button_m3e/button_m3e.dart';
@@ -10,6 +11,7 @@ import 'package:icon_button_m3e/icon_button_m3e.dart';
 
 import '../../../../shared/widgets/album_art_widget.dart';
 import '../../../../shared/widgets/album_theme_wrapper.dart';
+import '../../../library/data/providers/album_art_provider.dart';
 import '../../../settings/presentation/providers/flavor_provider.dart';
 import '../providers/album_accent_provider.dart';
 import '../providers/audio_player_provider.dart';
@@ -133,6 +135,12 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
     final animationStyle = ref.watch(playerAnimationStyleProvider);
     final themeState = ref.watch(playerThemeProvider);
 
+    // Watch album art provider - only if we have a valid file path
+    final filePath = playerState.currentTrack?.filePath;
+    final albumArtAsync = filePath != null && filePath.isNotEmpty
+        ? ref.watch(albumArtFromFileProvider(filePath))
+        : const AsyncValue<Uint8List?>.data(null);
+
     // Use album palette background if active, otherwise use flavor base
     final backgroundColor =
         themeState.isAlbumPaletteActive && themeState.albumColorScheme != null
@@ -156,6 +164,7 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
                 animationStyle,
                 backgroundColor,
                 themeState,
+                albumArtAsync,
               );
             },
           ),
@@ -171,6 +180,7 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
     PlayerAnimationStyle animationStyle,
     Color backgroundColor,
     PlayerThemeState themeState,
+    AsyncValue<Uint8List?> albumArtAsync,
   ) {
     // Interpolate border radius based on expansion
     final borderRadius = 16 + (value * 12);
@@ -206,6 +216,7 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
                 animationStyle,
                 backgroundColor,
                 themeState,
+                albumArtAsync,
               ),
             ),
           ],
@@ -221,6 +232,7 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
     PlayerAnimationStyle animationStyle,
     Color backgroundColor,
     PlayerThemeState themeState,
+    AsyncValue<Uint8List?> albumArtAsync,
   ) {
     // DEBUG: Log track info when building expanded content
     debugPrint('=== DEBUG UI: _buildExpandedContent ===');
@@ -255,12 +267,13 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
                 SizedBox(
                   height: clampedAlbumSize + 40,
                   child: Center(
-                    child: AlbumArtWidget(
-                      filePath: playerState.currentTrack?.filePath,
-                      albumId: playerState.currentTrack?.albumId,
-                      size: clampedAlbumSize,
-                      borderRadius: 16 + (value * 18),
-                      flavor: flavor,
+                    child: _buildAlbumArt(
+                      animationStyle,
+                      playerState,
+                      albumArtAsync,
+                      clampedAlbumSize,
+                      flavor,
+                      value,
                     ),
                   ),
                 ),
@@ -289,6 +302,54 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
 
   double _lerp(double a, double b, double t) {
     return a + (b - a) * t;
+  }
+
+  /// Builds the album art widget based on animation style
+  Widget _buildAlbumArt(
+    PlayerAnimationStyle animationStyle,
+    PlayerState playerState,
+    AsyncValue<Uint8List?> albumArtAsync,
+    double size,
+    Flavor flavor,
+    double value,
+  ) {
+    final isPlaying = playerState.isPlaying;
+
+    if (animationStyle == PlayerAnimationStyle.vinyl) {
+      // Vinyl animation style - show rotating vinyl record
+      return albumArtAsync.when(
+        data: (albumArt) => _VinylAnimationWidget(
+          albumArt: albumArt,
+          flavor: flavor,
+          size: size,
+          borderRadius: 16 + (value * 18),
+          isPlaying: isPlaying,
+        ),
+        loading: () => _VinylAnimationWidget(
+          albumArt: null,
+          flavor: flavor,
+          size: size,
+          borderRadius: 16 + (value * 18),
+          isPlaying: isPlaying,
+        ),
+        error: (_, __) => _VinylAnimationWidget(
+          albumArt: null,
+          flavor: flavor,
+          size: size,
+          borderRadius: 16 + (value * 18),
+          isPlaying: isPlaying,
+        ),
+      );
+    } else {
+      // Simple animation style - show standard album art
+      return AlbumArtWidget(
+        filePath: playerState.currentTrack?.filePath,
+        albumId: playerState.currentTrack?.albumId,
+        size: size,
+        borderRadius: 16 + (value * 18),
+        flavor: flavor,
+      );
+    }
   }
 
   Widget _buildCustomAppBar(Flavor flavor, double value) {
@@ -458,7 +519,7 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
     );
   }
 
-  Widget _buildControlPanel(PlayerState state, Flavor flavor, double value) {
+Widget _buildControlPanel(PlayerState state, Flavor flavor, double value) {
     final notifier = ref.read(audioPlayerProvider.notifier);
     final accentState = ref.watch(albumAccentProvider);
     final themeState = ref.watch(playerThemeProvider);
@@ -471,18 +532,26 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
               ? accentState.accentColor
               : flavor.mauve);
 
+    // CORRECCIÓN: Usamos .toARGB32() en lugar del .value deprecado
     debugPrint(
-      '[AnimatedPlayerSheet] ControlPanel - isPlaying: ${state.isPlaying}, useAlbumColors: ${accentState.useAlbumColors}, useGenreColors: ${accentState.useGenreColors}, accentColor: ${accentColor.value.toRadixString(16)}',
+      '[AnimatedPlayerSheet] ControlPanel - isPlaying: ${state.isPlaying}, useAlbumColors: ${accentState.useAlbumColors}, useGenreColors: ${accentState.useGenreColors}, accentColor: ${accentColor.toARGB32().toRadixString(16)}',
     );
+
+    // CORRECCIÓN: Definimos onAccentColor aquí para que el Theme lo pueda usar
+    final onAccentColor = accentColor.computeLuminance() > 0.5
+        ? Colors.black
+        : Colors.white;
 
     // Wrap in Theme to ensure filled buttons use accent color
     return Theme(
       data: Theme.of(context).copyWith(
         colorScheme: Theme.of(context).colorScheme.copyWith(
           primary: accentColor,
-          onPrimary: accentColor.computeLuminance() > 0.5
-              ? Colors.black
-              : Colors.white,
+          onPrimary: onAccentColor,
+          secondaryContainer: accentColor.withValues(alpha: 0.2),
+          onSecondaryContainer: accentColor,
+          secondary: accentColor,
+          onSecondary: onAccentColor,
         ),
       ),
       child: Column(
@@ -504,9 +573,7 @@ class _AnimatedPlayerSheetState extends ConsumerState<AnimatedPlayerSheet>
                   onPressed: () => notifier.skipToPrevious(),
                   tooltip: 'Previous',
                 ),
-                // Play/Pause button - M3E morphing IconButtonM3E
-                // Uses filled variant when playing (heroic moment), tonal when paused
-                // Using isSelected for proper morphing behavior with centered icon
+                // Play/Pause button
                 IconButtonM3E(
                   variant: state.isPlaying
                       ? IconButtonM3EVariant.filled
