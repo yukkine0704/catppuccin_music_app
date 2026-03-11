@@ -90,7 +90,7 @@ class AlbumAccentNotifier extends StateNotifier<AlbumAccentState> {
       final albumArt = await artworkAsync.when(
         data: (data) async => data,
         loading: () async => null,
-        error: (_, __) async => null,
+        error: (_, _) async => null,
       );
 
       debugPrint(

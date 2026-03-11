@@ -893,7 +893,7 @@ class _VinylAnimationWidgetState extends State<_VinylAnimationWidget>
                     width: widget.size * 0.45,
                     height: widget.size * 0.45,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _buildPlaceholder(),
+                    errorBuilder: (_, _, _) => _buildPlaceholder(),
                   )
                 : _buildPlaceholder(),
           ),

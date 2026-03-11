@@ -108,7 +108,7 @@ class _VinylAnimationState extends State<VinylAnimation>
                     ? Image.memory(
                         widget.albumArt!,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _buildPlaceholder(),
+                        errorBuilder: (_, _, _) => _buildPlaceholder(),
                       )
                     : _buildPlaceholder(),
               ),

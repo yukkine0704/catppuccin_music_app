@@ -63,7 +63,7 @@ class AlbumArtWidget extends ConsumerWidget {
           return _buildPlaceholder();
         },
         loading: () => _buildLoading(),
-        error: (_, __) {
+        error: (_, _) {
           // Fallback to albumId on error
           if (albumId != null) {
             return _buildFromAlbumId(ref, albumId);
@@ -92,7 +92,7 @@ class AlbumArtWidget extends ConsumerWidget {
         return _buildPlaceholder();
       },
       loading: () => _buildLoading(),
-      error: (_, __) => _buildPlaceholder(),
+      error: (_, _) => _buildPlaceholder(),
     );
   }
 
@@ -104,7 +104,7 @@ class AlbumArtWidget extends ConsumerWidget {
         width: size,
         height: size,
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _buildPlaceholder(),
+        errorBuilder: (_, _, _) => _buildPlaceholder(),
       ),
     );
   }

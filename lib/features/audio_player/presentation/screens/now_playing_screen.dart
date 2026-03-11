@@ -352,7 +352,7 @@ class _VinylWidget extends StatefulWidget {
 
   const _VinylWidget({
     required this.isPlaying,
-    this.albumArt,
+    required this.albumArt, // Added required parameter
     required this.flavor,
   });
 
