@@ -36,7 +36,6 @@ class _MorphingPlayerState extends ConsumerState<MorphingPlayer>
   late AnimationController _controller;
 
   // Track drag state
-  double _dragExtent = 0.0;
   bool _isDragging = false;
 
   // Spring physics parameters - M3E Expressive scheme
@@ -86,39 +85,29 @@ class _MorphingPlayerState extends ConsumerState<MorphingPlayer>
   void _handleDragUpdate(DragUpdateDetails details) {
     if (!_isDragging) return;
 
-    _dragExtent += details.primaryDelta ?? 0;
-
-    // Convert drag extent to animation value
+    // Calculate delta as fraction of screen height for smooth 1:1 tracking
     final screenHeight = MediaQuery.of(context).size.height;
-    final delta = _dragExtent / screenHeight;
+    final delta = (details.primaryDelta ?? 0) / screenHeight;
 
+    // Subtract delta: dragging up (negative delta) increases value toward 1.0
     // Clamp between 0.0 (mini) and 1.0 (full)
-    final newValue = (_controller.value + delta).clamp(0.0, 1.0);
-    _controller.value = newValue;
+    _controller.value = (_controller.value - delta).clamp(0.0, 1.0);
   }
 
   void _handleDragEnd(DragEndDetails details) {
     _isDragging = false;
 
     final velocity = details.primaryVelocity ?? 0;
-    final currentValue = _controller.value;
 
-    double target;
-    if (velocity > 300) {
-      // Fast drag down - close
-      target = 0.0;
-    } else if (velocity < -300) {
-      // Fast drag up - open
-      target = 1.0;
-    } else if (currentValue > 0.5) {
-      // Above middle - stay open
-      target = 1.0;
+    // Use velocity threshold: fast drag up (< -300) opens player
+    if (velocity < -300) {
+      _runSpringAnimation(1.0);
+    } else if (_controller.value > 0.5) {
+      // Position threshold: above 50% stays open
+      _runSpringAnimation(1.0);
     } else {
-      // Below middle - close
-      target = 0.0;
+      _runSpringAnimation(0.0);
     }
-
-    _runSpringAnimation(target);
   }
 
   void _handleTap() {
@@ -166,7 +155,11 @@ class _MorphingPlayerState extends ConsumerState<MorphingPlayer>
         builder: (context, child) {
           final value = _controller.value;
 
-          // Interpolate position values
+          // Apply easeInOut curve for smoother internal element transitions
+          // This makes Album Art, opacities, and visual elements feel more natural
+          final smoothValue = Curves.easeInOut.transform(value);
+
+          // Interpolate position values (use raw value for 1:1 drag feel)
           // Mini (0.0): bottom rests on NavigationBar (80.0 + bottomPadding)
           // Full (1.0): bottom is 0.0 (covers entire screen)
           final bottom = _lerp(miniPlayerBottom, 0.0, value);
@@ -175,8 +168,8 @@ class _MorphingPlayerState extends ConsumerState<MorphingPlayer>
           // Full screen height uses full screen size without subtracting safe areas
           final height = _lerp(72.0, screenHeight, value);
 
-          // Interpolate border radius
-          final borderRadius = _lerp(16.0, 28.0, value);
+          // Interpolate border radius using smooth curve for natural feel
+          final borderRadius = _lerp(16.0, 28.0, smoothValue);
 
           return Positioned(
             left: left,
@@ -218,13 +211,13 @@ class _MorphingPlayerState extends ConsumerState<MorphingPlayer>
                         ? _buildMiniPlayerLayout(
                             flavor,
                             playerState,
-                            value,
+                            smoothValue,
                             themeState,
                           )
                         : _buildFullPlayerLayout(
                             flavor,
                             playerState,
-                            value,
+                            smoothValue,
                             themeState,
                             backgroundColor,
                           ),
@@ -403,9 +396,9 @@ class _MorphingPlayerState extends ConsumerState<MorphingPlayer>
     final screenWidth = MediaQuery.of(context).size.width;
     final topPadding = MediaQuery.of(context).padding.top;
 
-    // Calculate interpolated values
+    // Calculate interpolated values using smooth curve for natural feel
     final albumArtSize = _lerp(48, screenWidth * 0.65, value);
-    final borderRadius = _lerp(24, 28, value);
+    final borderRadiusArt = _lerp(24, 28, value);
     final horizontalPadding = _lerp(12, 16, value);
 
     // Full screen layout - no SafeArea, uses transparent background to cover status bar
@@ -490,7 +483,7 @@ class _MorphingPlayerState extends ConsumerState<MorphingPlayer>
                           albumArtAsync,
                           albumArtSize,
                           flavor,
-                          borderRadius,
+                          borderRadiusArt,
                         ),
                       ),
                     ),
