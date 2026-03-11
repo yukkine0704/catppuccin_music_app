@@ -4,11 +4,13 @@ import 'package:get_it/get_it.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../features/library/data/datasources/local_music_database_datasource.dart';
 import '../../features/library/data/datasources/local_music_datasource.dart';
 import '../../features/library/data/repositories/artwork_repository.dart';
 import '../../features/metadata_fetcher/data/datasources/metadata_fetcher_datasource.dart';
 import '../../features/settings/data/datasources/shared_prefs_datasource.dart';
 import '../../features/settings/data/repositories/settings_repository.dart';
+import '../database/database.dart';
 
 final getIt = GetIt.instance;
 
@@ -41,10 +43,22 @@ Future<void> initializeDependencies() async {
   }
 
   // Data Sources - Singleton protection
+  if (!getIt.isRegistered<AppDatabase>()) {
+    debugPrint('[DI] Registering AppDatabase...');
+    getIt.registerLazySingleton<AppDatabase>(() => AppDatabase());
+  }
+
   if (!getIt.isRegistered<LocalMusicDatasource>()) {
     debugPrint('[DI] Registering LocalMusicDatasource...');
     getIt.registerLazySingleton<LocalMusicDatasource>(
       () => LocalMusicDatasource(),
+    );
+  }
+
+  if (!getIt.isRegistered<LocalMusicDatabaseDatasource>()) {
+    debugPrint('[DI] Registering LocalMusicDatabaseDatasource...');
+    getIt.registerLazySingleton<LocalMusicDatabaseDatasource>(
+      () => LocalMusicDatabaseDatasource(getIt<AppDatabase>()),
     );
   }
 
