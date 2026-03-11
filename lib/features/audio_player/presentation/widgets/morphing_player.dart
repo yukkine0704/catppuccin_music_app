@@ -188,7 +188,7 @@ class _MorphingPlayerState extends ConsumerState<MorphingPlayer>
                     color:
                         themeState.isAlbumPaletteActive &&
                             themeState.albumColorScheme != null
-                        ? themeState.albumColorScheme!.surfaceContainerHighest
+                        ? themeState.albumColorScheme!.surface
                         : flavor.surface0,
                     borderRadius: BorderRadius.circular(borderRadius),
                     border: Border.all(
