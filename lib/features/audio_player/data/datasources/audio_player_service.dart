@@ -154,15 +154,25 @@ class AudioPlayerService extends BaseAudioHandler
   /// Skips to next track.
   @override
   Future<void> skipToNext() async {
-    if (_currentIndex < _tracks.length - 1) {
+    // Use player's current index to ensure we have the latest value
+    final playerIndex = _player.currentIndex ?? _currentIndex;
+    if (playerIndex < _tracks.length - 1) {
       await _player.seekToNext();
+    } else if (_player.loopMode == LoopMode.all) {
+      // If at end and loop is enabled, go to first track
+      await _player.seek(Duration.zero, index: 0);
     }
   }
 
   /// Skips to previous track.
   @override
   Future<void> skipToPrevious() async {
-    await _player.seekToPrevious();
+    // If we're more than 3 seconds into the track, restart it instead of going to previous
+    if (_player.position.inSeconds > 3) {
+      await _player.seek(Duration.zero);
+    } else {
+      await _player.seekToPrevious();
+    }
   }
 
   /// Sets the playback speed.

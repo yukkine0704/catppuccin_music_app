@@ -182,12 +182,50 @@ class AudioPlayerNotifier extends StateNotifier<PlayerState> {
 
   /// Skips to next track.
   Future<void> skipToNext() async {
+    final currentIndex = state.currentTrackIndex;
+    final queue = state.queue;
+
+    if (queue.isEmpty || currentIndex >= queue.length - 1) {
+      return;
+    }
+
+    final nextIndex = currentIndex + 1;
+    final nextTrack = queue[nextIndex];
+
     await _audioHandler.skipToNext();
+
+    // Update state immediately for responsive UI
+    state = state.copyWith(
+      currentTrack: nextTrack,
+      currentTrackIndex: nextIndex,
+    );
+
+    // Add to history
+    _ref.read(historyProvider.notifier).addToRecentlyPlayed(nextTrack);
   }
 
   /// Skips to previous track.
   Future<void> skipToPrevious() async {
+    final currentIndex = state.currentTrackIndex;
+    final queue = state.queue;
+
+    if (queue.isEmpty || currentIndex <= 0) {
+      return;
+    }
+
+    final previousIndex = currentIndex - 1;
+    final previousTrack = queue[previousIndex];
+
     await _audioHandler.skipToPrevious();
+
+    // Update state immediately for responsive UI
+    state = state.copyWith(
+      currentTrack: previousTrack,
+      currentTrackIndex: previousIndex,
+    );
+
+    // Add to history
+    _ref.read(historyProvider.notifier).addToRecentlyPlayed(previousTrack);
   }
 
   /// Sets the repeat mode.
