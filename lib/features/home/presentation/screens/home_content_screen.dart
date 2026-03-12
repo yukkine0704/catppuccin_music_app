@@ -5,11 +5,15 @@ import 'package:m3e_collection/m3e_collection.dart';
 
 import '../../../../shared/widgets/album_art_widget.dart';
 import '../../../audio_player/presentation/providers/audio_player_provider.dart';
+import '../../../audio_player/presentation/providers/history_provider.dart';
 import '../../../library/domain/entities/track.dart';
 import '../../../library/presentation/providers/library_provider.dart';
 import '../../../settings/presentation/providers/flavor_provider.dart';
 import 'history_screen.dart';
 import 'most_played_screen.dart';
+
+/// Provider for search query state.
+final searchQueryProvider = StateProvider<String>((ref) => '');
 
 /// Home content screen with CustomScrollView layout.
 /// Features: Header, Search, Carousel, Quick Actions, Recently Played
@@ -26,16 +30,6 @@ class _HomeContentScreenState extends ConsumerState<HomeContentScreen> {
   );
   int _currentCarouselPage = 0;
   bool _hasLoadedSongs = false;
-
-  // Mock data for recently played
-  final List<Map<String, String>> _recentlyPlayedData = [
-    {'title': 'Neon Nights', 'artist': 'Synth Wave'},
-    {'title': 'Ocean Breeze', 'artist': 'Chill Masters'},
-    {'title': 'Electric Heart', 'artist': 'Pop Stars'},
-    {'title': 'Golden Hour', 'artist': 'Sunset Club'},
-    {'title': 'Midnight Run', 'artist': 'Night Owl'},
-    {'title': 'Crystal Clear', 'artist': 'Ambient Zone'},
-  ];
 
   @override
   void initState() {
@@ -150,14 +144,11 @@ class _HomeContentScreenState extends ConsumerState<HomeContentScreen> {
                 style: TextStyle(color: flavor.subtext1, fontSize: 14),
               ),
               const SizedBox(height: 24),
-              FilledButton.icon(
+              ButtonM3E(
                 onPressed: _retryPermission,
-                icon: const Icon(Icons.refresh_rounded),
                 label: const Text('Solicitar permiso'),
-                style: FilledButton.styleFrom(
-                  backgroundColor: flavor.mauve,
-                  foregroundColor: flavor.text,
-                ),
+                icon: const Icon(Icons.refresh_rounded),
+                style: ButtonM3EStyle.filled,
               ),
             ],
           ),
@@ -197,16 +188,13 @@ class _HomeContentScreenState extends ConsumerState<HomeContentScreen> {
                 style: TextStyle(color: flavor.subtext1, fontSize: 14),
               ),
               const SizedBox(height: 24),
-              FilledButton.icon(
+              ButtonM3E(
                 onPressed: () {
                   ref.read(libraryProvider.notifier).refresh();
                 },
-                icon: const Icon(Icons.refresh_rounded),
                 label: const Text('Escanear de nuevo'),
-                style: FilledButton.styleFrom(
-                  backgroundColor: flavor.mauve,
-                  foregroundColor: flavor.text,
-                ),
+                icon: const Icon(Icons.refresh_rounded),
+                style: ButtonM3EStyle.filled,
               ),
             ],
           ),
@@ -255,27 +243,7 @@ class _HomeContentScreenState extends ConsumerState<HomeContentScreen> {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: TextField(
-                decoration: InputDecoration(
-                  hintText: 'Buscar canciones, artistas...',
-                  hintStyle: TextStyle(color: flavor.subtext1),
-                  prefixIcon: Icon(
-                    Icons.search_rounded,
-                    color: flavor.subtext1,
-                  ),
-                  filled: true,
-                  fillColor: flavor.surface0,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(28),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 16,
-                  ),
-                ),
-                style: TextStyle(color: flavor.text),
-              ),
+              child: _SearchBarM3E(flavor: flavor),
             ),
           ),
 
@@ -313,10 +281,10 @@ class _HomeContentScreenState extends ConsumerState<HomeContentScreen> {
 
                             final track = carouselTracks[index];
                             final colors = [
-                              const Color(0xFF6366F1),
-                              const Color(0xFFEC4899),
-                              const Color(0xFF14B8A6),
-                              const Color(0xFFF59E0B),
+                              flavor.mauve,
+                              flavor.pink,
+                              flavor.sapphire,
+                              flavor.yellow,
                             ];
                             final colorValue = colors[index % colors.length];
                             return _TrendingCard(
@@ -434,13 +402,13 @@ class _HomeContentScreenState extends ConsumerState<HomeContentScreen> {
           ),
 
           // =====================
-          // 5. RECENTLY PLAYED SECTION
+          // 5. RECENTLY PLAYED SECTION (Real Data)
           // =====================
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
               child: Text(
-                'Recently played',
+                'Reproducido recientemente',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   color: flavor.text,
                   fontWeight: FontWeight.w600,
@@ -452,17 +420,61 @@ class _HomeContentScreenState extends ConsumerState<HomeContentScreen> {
           SliverToBoxAdapter(
             child: SizedBox(
               height: 175,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: _recentlyPlayedData.length,
-                itemBuilder: (context, index) {
-                  final item = _recentlyPlayedData[index];
-                  return _RecentlyPlayedCard(
-                    title: item['title']!,
-                    artist: item['artist']!,
-                    flavor: flavor,
-                    onTap: () {},
+              child: Consumer(
+                builder: (context, ref, child) {
+                  final historyState = ref.watch(historyProvider);
+                  final recentlyPlayed = historyState.recentlyPlayed;
+
+                  if (recentlyPlayed.isEmpty) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Container(
+                        height: 130,
+                        decoration: BoxDecoration(
+                          color: flavor.surface0,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.history_rounded,
+                                color: flavor.subtext1,
+                                size: 32,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Aún no hay historial',
+                                style: TextStyle(
+                                  color: flavor.subtext1,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+
+                  final displayTracks = recentlyPlayed.take(10).toList();
+                  return ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: displayTracks.length,
+                    itemBuilder: (context, index) {
+                      final track = displayTracks[index];
+                      return _RecentlyPlayedCard(
+                        track: track,
+                        flavor: flavor,
+                        onTap: () {
+                          ref
+                              .read(audioPlayerProvider.notifier)
+                              .playTracks(displayTracks, startIndex: index);
+                        },
+                      );
+                    },
                   );
                 },
               ),
@@ -850,21 +862,9 @@ class _TrackListTile extends ConsumerWidget {
       placeholderIcon: Icons.music_note_rounded,
     );
   }
-
-  Widget _buildPlaceholder() {
-    return Container(
-      width: 48,
-      height: 48,
-      decoration: BoxDecoration(
-        color: flavor.surface1,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Icon(Icons.music_note_rounded, color: flavor.subtext1),
-    );
-  }
 }
 
-/// Quick action circular button widget
+/// Quick action circular button widget with M3E design.
 class _QuickActionButton extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -880,52 +880,58 @@ class _QuickActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: flavor.surface0,
-              shape: BoxShape.circle,
-              border: Border.all(color: flavor.surface1, width: 1),
-            ),
-            child: IconButtonM3E(
-              icon: Icon(icon, color: flavor.mauve, size: 24),
-              variant: IconButtonM3EVariant.tonal,
-              onPressed: onTap,
-            ),
+    return Semantics(
+      label: label,
+      button: true,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(28),
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: flavor.surface0,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: flavor.surface1, width: 1),
+                ),
+                child: Icon(icon, color: flavor.mauve, size: 24),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: 70,
+                child: Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: flavor.subtext1,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          SizedBox(
-            width: 70,
-            child: Text(
-              label,
-              textAlign: TextAlign.center,
-              style: TextStyle(color: flavor.subtext1, fontSize: 11),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 }
 
-/// Recently played square card widget
+/// Recently played card widget with real track data.
 class _RecentlyPlayedCard extends StatelessWidget {
-  final String title;
-  final String artist;
+  final Track track;
   final Flavor flavor;
   final VoidCallback onTap;
 
   const _RecentlyPlayedCard({
-    required this.title,
-    required this.artist,
+    required this.track,
     required this.flavor,
     required this.onTap,
   });
@@ -940,7 +946,7 @@ class _RecentlyPlayedCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Square image placeholder
+            // Square image with album art
             Container(
               width: 130,
               height: 130,
@@ -955,36 +961,38 @@ class _RecentlyPlayedCard extends StatelessWidget {
                   ),
                 ],
               ),
-              child: Stack(
-                children: [
-                  // Placeholder gradient
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          flavor.mauve.withValues(alpha: 0.4),
-                          flavor.pink.withValues(alpha: 0.4),
-                        ],
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Stack(
+                  children: [
+                    // Placeholder gradient
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            flavor.mauve.withValues(alpha: 0.4),
+                            flavor.pink.withValues(alpha: 0.4),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                  // Music icon
-                  Center(
-                    child: Icon(
-                      Icons.music_note_rounded,
-                      color: flavor.text.withValues(alpha: 0.6),
-                      size: 40,
+                    // Album art
+                    AlbumArtWidget(
+                      filePath: track.filePath,
+                      albumId: track.albumId,
+                      size: 130,
+                      borderRadius: 0,
+                      placeholderIcon: Icons.music_note_rounded,
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              title,
+              track.title,
               style: TextStyle(
                 color: flavor.text,
                 fontSize: 13,
@@ -994,13 +1002,92 @@ class _RecentlyPlayedCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
             Text(
-              artist,
+              track.artist,
               style: TextStyle(color: flavor.subtext1, fontSize: 11),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Custom SearchBarM3E widget using M3E design tokens.
+class _SearchBarM3E extends ConsumerStatefulWidget {
+  final Flavor flavor;
+
+  const _SearchBarM3E({required this.flavor});
+
+  @override
+  ConsumerState<_SearchBarM3E> createState() => _SearchBarM3EState();
+}
+
+class _SearchBarM3EState extends ConsumerState<_SearchBarM3E> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 56,
+      decoration: BoxDecoration(
+        color: widget.flavor.surface0,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: widget.flavor.surface1, width: 1),
+      ),
+      child: Row(
+        children: [
+          const SizedBox(width: 16),
+          Icon(Icons.search_rounded, color: widget.flavor.subtext1, size: 24),
+          const SizedBox(width: 12),
+          Expanded(
+            child: TextField(
+              controller: _controller,
+              onChanged: (value) {
+                ref.read(searchQueryProvider.notifier).state = value;
+              },
+              style: TextStyle(color: widget.flavor.text, fontSize: 16),
+              decoration: InputDecoration(
+                hintText: 'Buscar canciones, artistas...',
+                hintStyle: TextStyle(
+                  color: widget.flavor.subtext1,
+                  fontSize: 16,
+                ),
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
+          ),
+          // Clear button
+          if (_controller.text.isNotEmpty)
+            IconButton(
+              icon: Icon(
+                Icons.close_rounded,
+                color: widget.flavor.subtext1,
+                size: 20,
+              ),
+              onPressed: () {
+                _controller.clear();
+                ref.read(searchQueryProvider.notifier).state = '';
+              },
+              tooltip: 'Limpiar',
+            )
+          else
+            const SizedBox(width: 8),
+        ],
       ),
     );
   }

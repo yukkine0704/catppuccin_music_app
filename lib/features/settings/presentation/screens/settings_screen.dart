@@ -2,13 +2,13 @@ import 'package:catppuccin_flutter/catppuccin_flutter.dart'
     show Flavor, catppuccin;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+// Importaciones M3E según tu documentación
 import 'package:m3e_collection/m3e_collection.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../audio_player/presentation/providers/player_animation_provider.dart';
 import '../providers/flavor_provider.dart';
 
-/// Settings screen for app configuration.
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
@@ -34,209 +34,135 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     });
   }
 
-  Future<void> _saveDarkMode(bool value) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('darkMode', value);
-    setState(() {
-      _darkMode = value;
-    });
-  }
-
-  Future<void> _savePlaybackSpeed(double value) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setDouble('playbackSpeed', value);
-    setState(() {
-      _playbackSpeed = value;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
-    // Watch the flavor provider to rebuild when theme changes globally
     final flavor = ref.watch(flavorProvider);
 
     return Scaffold(
       backgroundColor: flavor.base,
-      appBar: AppBarM3E(
-        titleText: 'Ajustes',
-        backgroundColor: flavor.crust.withValues(alpha: 0.8),
-        foregroundColor: flavor.text,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // Appearance section
-          _buildSectionHeader('Apariencia', flavor),
-          _buildSettingsTile(
-            title: 'Sabor de Catppuccin',
-            subtitle: _getFlavorName(flavor),
-            trailing: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                color: flavor.surface1,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: DropdownButton<Flavor>(
-                value: flavor,
-                dropdownColor: flavor.surface1,
-                underline: const SizedBox(),
-                icon: Icon(Icons.arrow_drop_down, color: flavor.text),
-                style: TextStyle(color: flavor.text, fontSize: 14),
-                items: [
-                  DropdownMenuItem(
-                    value: catppuccin.mocha,
-                    child: Text('Mocha', style: TextStyle(color: flavor.text)),
+      body: CustomScrollView(
+        slivers: [
+          // 1. Header Expressivo
+          SliverAppBarM3E(
+            variant: AppBarM3EVariant.large,
+            titleText: 'Ajustes',
+            pinned: true,
+          ),
+
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // --- SECCIÓN APARIENCIA ---
+                  _buildM3ESectionHeader('Apariencia', flavor),
+                  _buildSettingsContainer(
+                    flavor: flavor,
+                    children: [
+                      _buildSettingsTile(
+                        title: 'Tema Visual',
+                        subtitle: 'Selecciona tu paleta Catppuccin',
+                        flavor: flavor,
+                        trailing: _buildFlavorSelector(flavor),
+                      ),
+                      const Divider(height: 1, indent: 16, endIndent: 16),
+                      _buildSettingsTile(
+                        title: 'Modo Oscuro',
+                        subtitle: 'Alternar entre luz y oscuridad',
+                        flavor: flavor,
+                        trailing: Switch(
+                          value: _darkMode,
+                          activeColor: flavor.mauve,
+                          onChanged: (value) =>
+                              setState(() => _darkMode = value),
+                        ),
+                      ),
+                    ],
                   ),
-                  DropdownMenuItem(
-                    value: catppuccin.latte,
-                    child: Text('Latte', style: TextStyle(color: flavor.text)),
+
+                  const SizedBox(height: 24),
+
+                  // --- SECCIÓN REPRODUCTOR ---
+                  _buildM3ESectionHeader('Reproductor', flavor),
+                  _buildSettingsContainer(
+                    flavor: flavor,
+                    children: [
+                      _buildSettingsTile(
+                        title: 'Animación',
+                        subtitle: 'Estilo visual del disco',
+                        flavor: flavor,
+                        trailing: _buildAnimationSelector(flavor),
+                      ),
+                      const Divider(height: 1, indent: 16, endIndent: 16),
+                      _buildSettingsTile(
+                        title: 'Velocidad',
+                        subtitle: '${_playbackSpeed.toStringAsFixed(1)}x',
+                        flavor: flavor,
+                        trailing: Slider(
+                          value: _playbackSpeed,
+                          min: 0.5,
+                          max: 2.0,
+                          divisions: 6,
+                          activeColor: flavor.mauve,
+                          onChanged: (v) => setState(() => _playbackSpeed = v),
+                        ),
+                      ),
+                    ],
                   ),
-                  DropdownMenuItem(
-                    value: catppuccin.frappe,
-                    child: Text('Frappé', style: TextStyle(color: flavor.text)),
-                  ),
-                  DropdownMenuItem(
-                    value: catppuccin.macchiato,
-                    child: Text(
-                      'Macchiato',
-                      style: TextStyle(color: flavor.text),
+
+                  const SizedBox(height: 32),
+
+                  // Botón de acción final tipo M3E
+                  Center(
+                    child: ButtonM3E(
+                      label: const Text('Restablecer valores'),
+                      icon: const Icon(Icons.restore_rounded),
+                      style: ButtonM3EStyle.outlined,
+                      size: ButtonM3ESize.md,
+                      onPressed: () {
+                        // Acción de reset
+                      },
                     ),
                   ),
                 ],
-                onChanged: (value) {
-                  if (value != null) {
-                    ref.read(flavorProvider.notifier).setFlavor(value);
-                  }
-                },
               ),
             ),
-            flavor: flavor,
-          ),
-          _buildSettingsTile(
-            title: 'Modo Oscuro',
-            subtitle: 'Usar tema oscuro de Catppuccin',
-            trailing: Switch(
-              value: _darkMode,
-              activeThumbColor: flavor.mauve,
-              onChanged: _saveDarkMode,
-            ),
-            flavor: flavor,
-          ),
-
-          const SizedBox(height: 24),
-
-          // Playback section
-          _buildSectionHeader('Reproducción', flavor),
-          _buildSettingsTile(
-            title: 'Velocidad de reproducción',
-            subtitle: '${_playbackSpeed}x',
-            trailing: SizedBox(
-              width: 150,
-              child: Slider(
-                value: _playbackSpeed,
-                min: 0.5,
-                max: 2.0,
-                divisions: 6,
-                activeColor: flavor.mauve,
-                inactiveColor: flavor.surface1,
-                onChanged: _savePlaybackSpeed,
-              ),
-            ),
-            flavor: flavor,
-          ),
-
-          const SizedBox(height: 24),
-
-          // Animation section
-          _buildSectionHeader('Animación', flavor),
-          _buildSettingsTile(
-            title: 'Estilo de animación',
-            subtitle: _getAnimationStyleName(
-              ref.watch(playerAnimationStyleProvider),
-              flavor,
-            ),
-            trailing: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                color: flavor.surface1,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: DropdownButton<PlayerAnimationStyle>(
-                value: ref.watch(playerAnimationStyleProvider),
-                dropdownColor: flavor.surface1,
-                underline: const SizedBox(),
-                icon: Icon(Icons.arrow_drop_down, color: flavor.text),
-                style: TextStyle(color: flavor.text, fontSize: 14),
-                items: [
-                  DropdownMenuItem(
-                    value: PlayerAnimationStyle.simple,
-                    child: Text('Simple', style: TextStyle(color: flavor.text)),
-                  ),
-                  DropdownMenuItem(
-                    value: PlayerAnimationStyle.vinyl,
-                    child: Text('Vinilo', style: TextStyle(color: flavor.text)),
-                  ),
-                ],
-                onChanged: (value) {
-                  if (value != null) {
-                    ref
-                        .read(playerAnimationStyleProvider.notifier)
-                        .setStyle(value);
-                  }
-                },
-              ),
-            ),
-            flavor: flavor,
-          ),
-
-          const SizedBox(height: 24),
-
-          // About section
-          _buildSectionHeader('Acerca de', flavor),
-          _buildSettingsTile(
-            title: 'The Vinyl Sanctuary',
-            subtitle: 'Versión 1.0.0',
-            trailing: Icon(Icons.music_note_rounded, color: flavor.mauve),
-            flavor: flavor,
-          ),
-          _buildSettingsTile(
-            title: 'Diseñado con',
-            subtitle: 'Flutter, Catppuccin & M3E',
-            trailing: Icon(Icons.code_rounded, color: flavor.blue),
-            flavor: flavor,
           ),
         ],
       ),
     );
   }
 
-  String _getFlavorName(Flavor flavor) {
-    if (flavor == catppuccin.latte) return 'Latte';
-    if (flavor == catppuccin.frappe) return 'Frappé';
-    if (flavor == catppuccin.macchiato) return 'Macchiato';
-    return 'Mocha';
-  }
-
-  String _getAnimationStyleName(PlayerAnimationStyle style, Flavor flavor) {
-    switch (style) {
-      case PlayerAnimationStyle.vinyl:
-        return 'Vinilo giratorio';
-      case PlayerAnimationStyle.simple:
-        return 'Álbum simple';
-    }
-  }
-
-  Widget _buildSectionHeader(String title, Flavor flavor) {
+  // Header de sección con tipografía M3E
+  Widget _buildM3ESectionHeader(String title, Flavor flavor) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(left: 8, bottom: 12),
       child: Text(
-        title,
+        title.toUpperCase(),
         style: TextStyle(
           color: flavor.mauve,
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 1.2,
         ),
       ),
+    );
+  }
+
+  // Contenedor que agrupa ajustes (Containment)
+  Widget _buildSettingsContainer({
+    required List<Widget> children,
+    required Flavor flavor,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: flavor.surface0,
+        borderRadius: BorderRadius.circular(24), // Radio expresivo grande
+        border: Border.all(color: flavor.surface1, width: 1),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(children: children),
     );
   }
 
@@ -246,20 +172,81 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     required Widget trailing,
     required Flavor flavor,
   }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: flavor.surface0,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: ListTile(
-        title: Text(
-          title,
-          style: TextStyle(color: flavor.text, fontWeight: FontWeight.w500),
-        ),
-        subtitle: Text(subtitle, style: TextStyle(color: flavor.subtext1)),
-        trailing: trailing,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: flavor.text,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: TextStyle(color: flavor.subtext1, fontSize: 13),
+                ),
+              ],
+            ),
+          ),
+          trailing,
+        ],
       ),
     );
+  }
+
+Widget _buildFlavorSelector(Flavor currentFlavor) {
+    return ButtonM3E(
+      // Mostramos el nombre del sabor actual
+      label: Text(_getFlavorName(currentFlavor)),
+      style: ButtonM3EStyle.tonal,
+      size: ButtonM3ESize.sm,
+      onPressed: () {
+        // 1. Definimos la lista de sabores disponibles
+        final flavors = [
+          catppuccin.latte,
+          catppuccin.frappe,
+          catppuccin.macchiato,
+          catppuccin.mocha,
+        ];
+
+        // 2. Buscamos el índice actual y calculamos el siguiente
+        final currentIndex = flavors.indexOf(currentFlavor);
+        final nextIndex = (currentIndex + 1) % flavors.length;
+        final nextFlavor = flavors[nextIndex];
+
+        // 3. ¡IMPORTANTE! Actualizamos el provider
+        // Asumiendo que tu flavorProvider tiene un notifier con un método setTheme o similar
+        ref.read(flavorProvider.notifier).setFlavor(nextFlavor);
+
+        // Si tu provider es un StateProvider simple, sería:
+        // ref.read(flavorProvider.notifier).state = nextFlavor;
+      },
+    );
+  }
+
+  Widget _buildAnimationSelector(Flavor flavor) {
+    final style = ref.watch(playerAnimationStyleProvider);
+    return ButtonM3E(
+      label: Text(style == PlayerAnimationStyle.vinyl ? 'Vinilo' : 'Simple'),
+      style: ButtonM3EStyle.tonal,
+      size: ButtonM3ESize.sm,
+      onPressed: () {
+        ref.read(playerAnimationStyleProvider.notifier).toggle();
+      },
+    );
+  }
+
+  String _getFlavorName(Flavor flavor) {
+    if (flavor == catppuccin.latte) return 'Latte';
+    if (flavor == catppuccin.frappe) return 'Frappé';
+    if (flavor == catppuccin.macchiato) return 'Macchiato';
+    return 'Mocha';
   }
 }
