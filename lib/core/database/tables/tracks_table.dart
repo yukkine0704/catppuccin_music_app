@@ -41,4 +41,11 @@ class TracksTable extends Table {
 
   /// Timestamp del último escaneo (para sync)
   IntColumn get lastScanned => integer()();
+
+  /// Indica si la pista está en la lista negra (carpeta bloqueada)
+  BoolColumn get isBlacklisted =>
+      boolean().withDefault(const Constant(false))();
+
+  /// Ruta de la carpeta donde está ubicada la pista
+  TextColumn get folderPath => text().nullable()();
 }

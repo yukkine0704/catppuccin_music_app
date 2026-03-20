@@ -7,6 +7,7 @@ import 'package:m3e_collection/m3e_collection.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../audio_player/presentation/providers/player_animation_provider.dart';
+import '../../../library/presentation/providers/library_provider.dart';
 import '../providers/flavor_provider.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -106,6 +107,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           divisions: 6,
                           activeColor: flavor.mauve,
                           onChanged: (v) => setState(() => _playbackSpeed = v),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // --- SECCIÓN BIBLIOTECA ---
+                  _buildM3ESectionHeader('Biblioteca', flavor),
+                  _buildSettingsContainer(
+                    flavor: flavor,
+                    children: [
+                      _buildSettingsTile(
+                        title: 'Carpetas bloqueadas',
+                        subtitle: 'Evitar que audios de apps aparezcan',
+                        flavor: flavor,
+                        trailing: IconButtonM3E(
+                          variant: IconButtonM3EVariant.standard,
+                          size: IconButtonM3ESize.sm,
+                          icon: const Icon(Icons.folder_off_outlined),
+                          onPressed: () =>
+                              _showBlacklistDialog(context, ref, flavor),
                         ),
                       ),
                     ],
@@ -248,5 +271,147 @@ Widget _buildFlavorSelector(Flavor currentFlavor) {
     if (flavor == catppuccin.frappe) return 'Frappé';
     if (flavor == catppuccin.macchiato) return 'Macchiato';
     return 'Mocha';
+  }
+
+  void _showBlacklistDialog(
+    BuildContext context,
+    WidgetRef ref,
+    Flavor flavor,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) => _BlacklistDialog(flavor: flavor),
+    );
+  }
+}
+
+/// Diálogo para gestionar la lista negra de carpetas
+class _BlacklistDialog extends ConsumerWidget {
+  final Flavor flavor;
+
+  const _BlacklistDialog({required this.flavor});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final blacklistState = ref.watch(blacklistProvider);
+
+    return AlertDialog(
+      backgroundColor: flavor.surface0,
+      title: Row(
+        children: [
+          Icon(Icons.folder_off_outlined, color: flavor.mauve),
+          const SizedBox(width: 12),
+          Text('Carpetas bloqueadas', style: TextStyle(color: flavor.text)),
+        ],
+      ),
+      content: SizedBox(
+        width: double.maxFinite,
+        height: 400,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Los audios de estas carpetas no aparecerán en la biblioteca.',
+              style: TextStyle(color: flavor.subtext1, fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: blacklistState.folders.length,
+                itemBuilder: (context, index) {
+                  final folder = blacklistState.folders[index];
+                  return ListTile(
+                    leading: Icon(Icons.folder_outlined, color: flavor.red),
+                    title: Text(folder, style: TextStyle(color: flavor.text)),
+                    trailing: IconButtonM3E(
+                      variant: IconButtonM3EVariant.standard,
+                      size: IconButtonM3ESize.sm,
+                      icon: Icon(Icons.delete_outline, color: flavor.red),
+                      onPressed: () {
+                        ref
+                            .read(blacklistProvider.notifier)
+                            .removeFolder(folder);
+                      },
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        ButtonM3E(
+          label: const Text('Añadir carpeta'),
+          style: ButtonM3EStyle.tonal,
+          size: ButtonM3ESize.sm,
+          icon: const Icon(Icons.add),
+          onPressed: () => _showAddFolderDialog(context, ref, flavor),
+        ),
+        ButtonM3E(
+          label: const Text('Restablecer'),
+          style: ButtonM3EStyle.outlined,
+          size: ButtonM3ESize.sm,
+          onPressed: () {
+            ref.read(blacklistProvider.notifier).resetToDefaults();
+          },
+        ),
+        ButtonM3E(
+          label: const Text('Cerrar'),
+          style: ButtonM3EStyle.filled,
+          size: ButtonM3ESize.sm,
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ],
+    );
+  }
+
+  void _showAddFolderDialog(
+    BuildContext context,
+    WidgetRef ref,
+    Flavor flavor,
+  ) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: flavor.surface0,
+        title: Text('Añadir carpeta', style: TextStyle(color: flavor.text)),
+        content: TextField(
+          controller: controller,
+          style: TextStyle(color: flavor.text),
+          decoration: InputDecoration(
+            hintText: 'Nombre de la carpeta',
+            hintStyle: TextStyle(color: flavor.subtext1),
+            enabledBorder: OutlineInputBorder(
+              borderSide: BorderSide(color: flavor.surface1),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderSide: BorderSide(color: flavor.mauve),
+            ),
+          ),
+        ),
+        actions: [
+          ButtonM3E(
+            label: const Text('Cancelar'),
+            style: ButtonM3EStyle.outlined,
+            size: ButtonM3ESize.sm,
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          ButtonM3E(
+            label: const Text('Añadir'),
+            style: ButtonM3EStyle.filled,
+            size: ButtonM3ESize.sm,
+            onPressed: () {
+              if (controller.text.isNotEmpty) {
+                ref.read(blacklistProvider.notifier).addFolder(controller.text);
+                Navigator.of(context).pop();
+              }
+            },
+          ),
+        ],
+      ),
+    );
   }
 }

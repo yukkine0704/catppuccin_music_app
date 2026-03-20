@@ -145,6 +145,32 @@ class $TracksTableTable extends TracksTable
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _isBlacklistedMeta = const VerificationMeta(
+    'isBlacklisted',
+  );
+  @override
+  late final GeneratedColumn<bool> isBlacklisted = GeneratedColumn<bool>(
+    'is_blacklisted',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_blacklisted" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _folderPathMeta = const VerificationMeta(
+    'folderPath',
+  );
+  @override
+  late final GeneratedColumn<String> folderPath = GeneratedColumn<String>(
+    'folder_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -160,6 +186,8 @@ class $TracksTableTable extends TracksTable
     dateAdded,
     genre,
     lastScanned,
+    isBlacklisted,
+    folderPath,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -268,6 +296,21 @@ class $TracksTableTable extends TracksTable
     } else if (isInserting) {
       context.missing(_lastScannedMeta);
     }
+    if (data.containsKey('is_blacklisted')) {
+      context.handle(
+        _isBlacklistedMeta,
+        isBlacklisted.isAcceptableOrUnknown(
+          data['is_blacklisted']!,
+          _isBlacklistedMeta,
+        ),
+      );
+    }
+    if (data.containsKey('folder_path')) {
+      context.handle(
+        _folderPathMeta,
+        folderPath.isAcceptableOrUnknown(data['folder_path']!, _folderPathMeta),
+      );
+    }
     return context;
   }
 
@@ -329,6 +372,14 @@ class $TracksTableTable extends TracksTable
         DriftSqlType.int,
         data['${effectivePrefix}last_scanned'],
       )!,
+      isBlacklisted: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_blacklisted'],
+      )!,
+      folderPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}folder_path'],
+      ),
     );
   }
 
@@ -377,6 +428,12 @@ class TracksTableData extends DataClass implements Insertable<TracksTableData> {
 
   /// Timestamp del último escaneo (para sync)
   final int lastScanned;
+
+  /// Indica si la pista está en la lista negra (carpeta bloqueada)
+  final bool isBlacklisted;
+
+  /// Ruta de la carpeta donde está ubicada la pista
+  final String? folderPath;
   const TracksTableData({
     required this.id,
     required this.trackId,
@@ -391,6 +448,8 @@ class TracksTableData extends DataClass implements Insertable<TracksTableData> {
     this.dateAdded,
     this.genre,
     required this.lastScanned,
+    required this.isBlacklisted,
+    this.folderPath,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -418,6 +477,10 @@ class TracksTableData extends DataClass implements Insertable<TracksTableData> {
       map['genre'] = Variable<String>(genre);
     }
     map['last_scanned'] = Variable<int>(lastScanned);
+    map['is_blacklisted'] = Variable<bool>(isBlacklisted);
+    if (!nullToAbsent || folderPath != null) {
+      map['folder_path'] = Variable<String>(folderPath);
+    }
     return map;
   }
 
@@ -444,6 +507,10 @@ class TracksTableData extends DataClass implements Insertable<TracksTableData> {
           ? const Value.absent()
           : Value(genre),
       lastScanned: Value(lastScanned),
+      isBlacklisted: Value(isBlacklisted),
+      folderPath: folderPath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(folderPath),
     );
   }
 
@@ -466,6 +533,8 @@ class TracksTableData extends DataClass implements Insertable<TracksTableData> {
       dateAdded: serializer.fromJson<int?>(json['dateAdded']),
       genre: serializer.fromJson<String?>(json['genre']),
       lastScanned: serializer.fromJson<int>(json['lastScanned']),
+      isBlacklisted: serializer.fromJson<bool>(json['isBlacklisted']),
+      folderPath: serializer.fromJson<String?>(json['folderPath']),
     );
   }
   @override
@@ -485,6 +554,8 @@ class TracksTableData extends DataClass implements Insertable<TracksTableData> {
       'dateAdded': serializer.toJson<int?>(dateAdded),
       'genre': serializer.toJson<String?>(genre),
       'lastScanned': serializer.toJson<int>(lastScanned),
+      'isBlacklisted': serializer.toJson<bool>(isBlacklisted),
+      'folderPath': serializer.toJson<String?>(folderPath),
     };
   }
 
@@ -502,6 +573,8 @@ class TracksTableData extends DataClass implements Insertable<TracksTableData> {
     Value<int?> dateAdded = const Value.absent(),
     Value<String?> genre = const Value.absent(),
     int? lastScanned,
+    bool? isBlacklisted,
+    Value<String?> folderPath = const Value.absent(),
   }) => TracksTableData(
     id: id ?? this.id,
     trackId: trackId ?? this.trackId,
@@ -516,6 +589,8 @@ class TracksTableData extends DataClass implements Insertable<TracksTableData> {
     dateAdded: dateAdded.present ? dateAdded.value : this.dateAdded,
     genre: genre.present ? genre.value : this.genre,
     lastScanned: lastScanned ?? this.lastScanned,
+    isBlacklisted: isBlacklisted ?? this.isBlacklisted,
+    folderPath: folderPath.present ? folderPath.value : this.folderPath,
   );
   TracksTableData copyWithCompanion(TracksTableCompanion data) {
     return TracksTableData(
@@ -536,6 +611,12 @@ class TracksTableData extends DataClass implements Insertable<TracksTableData> {
       lastScanned: data.lastScanned.present
           ? data.lastScanned.value
           : this.lastScanned,
+      isBlacklisted: data.isBlacklisted.present
+          ? data.isBlacklisted.value
+          : this.isBlacklisted,
+      folderPath: data.folderPath.present
+          ? data.folderPath.value
+          : this.folderPath,
     );
   }
 
@@ -554,7 +635,9 @@ class TracksTableData extends DataClass implements Insertable<TracksTableData> {
           ..write('year: $year, ')
           ..write('dateAdded: $dateAdded, ')
           ..write('genre: $genre, ')
-          ..write('lastScanned: $lastScanned')
+          ..write('lastScanned: $lastScanned, ')
+          ..write('isBlacklisted: $isBlacklisted, ')
+          ..write('folderPath: $folderPath')
           ..write(')'))
         .toString();
   }
@@ -574,6 +657,8 @@ class TracksTableData extends DataClass implements Insertable<TracksTableData> {
     dateAdded,
     genre,
     lastScanned,
+    isBlacklisted,
+    folderPath,
   );
   @override
   bool operator ==(Object other) =>
@@ -591,7 +676,9 @@ class TracksTableData extends DataClass implements Insertable<TracksTableData> {
           other.year == this.year &&
           other.dateAdded == this.dateAdded &&
           other.genre == this.genre &&
-          other.lastScanned == this.lastScanned);
+          other.lastScanned == this.lastScanned &&
+          other.isBlacklisted == this.isBlacklisted &&
+          other.folderPath == this.folderPath);
 }
 
 class TracksTableCompanion extends UpdateCompanion<TracksTableData> {
@@ -608,6 +695,8 @@ class TracksTableCompanion extends UpdateCompanion<TracksTableData> {
   final Value<int?> dateAdded;
   final Value<String?> genre;
   final Value<int> lastScanned;
+  final Value<bool> isBlacklisted;
+  final Value<String?> folderPath;
   const TracksTableCompanion({
     this.id = const Value.absent(),
     this.trackId = const Value.absent(),
@@ -622,6 +711,8 @@ class TracksTableCompanion extends UpdateCompanion<TracksTableData> {
     this.dateAdded = const Value.absent(),
     this.genre = const Value.absent(),
     this.lastScanned = const Value.absent(),
+    this.isBlacklisted = const Value.absent(),
+    this.folderPath = const Value.absent(),
   });
   TracksTableCompanion.insert({
     this.id = const Value.absent(),
@@ -637,6 +728,8 @@ class TracksTableCompanion extends UpdateCompanion<TracksTableData> {
     this.dateAdded = const Value.absent(),
     this.genre = const Value.absent(),
     required int lastScanned,
+    this.isBlacklisted = const Value.absent(),
+    this.folderPath = const Value.absent(),
   }) : trackId = Value(trackId),
        title = Value(title),
        artist = Value(artist),
@@ -658,6 +751,8 @@ class TracksTableCompanion extends UpdateCompanion<TracksTableData> {
     Expression<int>? dateAdded,
     Expression<String>? genre,
     Expression<int>? lastScanned,
+    Expression<bool>? isBlacklisted,
+    Expression<String>? folderPath,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -673,6 +768,8 @@ class TracksTableCompanion extends UpdateCompanion<TracksTableData> {
       if (dateAdded != null) 'date_added': dateAdded,
       if (genre != null) 'genre': genre,
       if (lastScanned != null) 'last_scanned': lastScanned,
+      if (isBlacklisted != null) 'is_blacklisted': isBlacklisted,
+      if (folderPath != null) 'folder_path': folderPath,
     });
   }
 
@@ -690,6 +787,8 @@ class TracksTableCompanion extends UpdateCompanion<TracksTableData> {
     Value<int?>? dateAdded,
     Value<String?>? genre,
     Value<int>? lastScanned,
+    Value<bool>? isBlacklisted,
+    Value<String?>? folderPath,
   }) {
     return TracksTableCompanion(
       id: id ?? this.id,
@@ -705,6 +804,8 @@ class TracksTableCompanion extends UpdateCompanion<TracksTableData> {
       dateAdded: dateAdded ?? this.dateAdded,
       genre: genre ?? this.genre,
       lastScanned: lastScanned ?? this.lastScanned,
+      isBlacklisted: isBlacklisted ?? this.isBlacklisted,
+      folderPath: folderPath ?? this.folderPath,
     );
   }
 
@@ -750,6 +851,12 @@ class TracksTableCompanion extends UpdateCompanion<TracksTableData> {
     if (lastScanned.present) {
       map['last_scanned'] = Variable<int>(lastScanned.value);
     }
+    if (isBlacklisted.present) {
+      map['is_blacklisted'] = Variable<bool>(isBlacklisted.value);
+    }
+    if (folderPath.present) {
+      map['folder_path'] = Variable<String>(folderPath.value);
+    }
     return map;
   }
 
@@ -768,7 +875,9 @@ class TracksTableCompanion extends UpdateCompanion<TracksTableData> {
           ..write('year: $year, ')
           ..write('dateAdded: $dateAdded, ')
           ..write('genre: $genre, ')
-          ..write('lastScanned: $lastScanned')
+          ..write('lastScanned: $lastScanned, ')
+          ..write('isBlacklisted: $isBlacklisted, ')
+          ..write('folderPath: $folderPath')
           ..write(')'))
         .toString();
   }
@@ -800,6 +909,8 @@ typedef $$TracksTableTableCreateCompanionBuilder =
       Value<int?> dateAdded,
       Value<String?> genre,
       required int lastScanned,
+      Value<bool> isBlacklisted,
+      Value<String?> folderPath,
     });
 typedef $$TracksTableTableUpdateCompanionBuilder =
     TracksTableCompanion Function({
@@ -816,6 +927,8 @@ typedef $$TracksTableTableUpdateCompanionBuilder =
       Value<int?> dateAdded,
       Value<String?> genre,
       Value<int> lastScanned,
+      Value<bool> isBlacklisted,
+      Value<String?> folderPath,
     });
 
 class $$TracksTableTableFilterComposer
@@ -889,6 +1002,16 @@ class $$TracksTableTableFilterComposer
 
   ColumnFilters<int> get lastScanned => $composableBuilder(
     column: $table.lastScanned,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isBlacklisted => $composableBuilder(
+    column: $table.isBlacklisted,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get folderPath => $composableBuilder(
+    column: $table.folderPath,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -966,6 +1089,16 @@ class $$TracksTableTableOrderingComposer
     column: $table.lastScanned,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get isBlacklisted => $composableBuilder(
+    column: $table.isBlacklisted,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get folderPath => $composableBuilder(
+    column: $table.folderPath,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$TracksTableTableAnnotationComposer
@@ -1019,6 +1152,16 @@ class $$TracksTableTableAnnotationComposer
     column: $table.lastScanned,
     builder: (column) => column,
   );
+
+  GeneratedColumn<bool> get isBlacklisted => $composableBuilder(
+    column: $table.isBlacklisted,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get folderPath => $composableBuilder(
+    column: $table.folderPath,
+    builder: (column) => column,
+  );
 }
 
 class $$TracksTableTableTableManager
@@ -1065,6 +1208,8 @@ class $$TracksTableTableTableManager
                 Value<int?> dateAdded = const Value.absent(),
                 Value<String?> genre = const Value.absent(),
                 Value<int> lastScanned = const Value.absent(),
+                Value<bool> isBlacklisted = const Value.absent(),
+                Value<String?> folderPath = const Value.absent(),
               }) => TracksTableCompanion(
                 id: id,
                 trackId: trackId,
@@ -1079,6 +1224,8 @@ class $$TracksTableTableTableManager
                 dateAdded: dateAdded,
                 genre: genre,
                 lastScanned: lastScanned,
+                isBlacklisted: isBlacklisted,
+                folderPath: folderPath,
               ),
           createCompanionCallback:
               ({
@@ -1095,6 +1242,8 @@ class $$TracksTableTableTableManager
                 Value<int?> dateAdded = const Value.absent(),
                 Value<String?> genre = const Value.absent(),
                 required int lastScanned,
+                Value<bool> isBlacklisted = const Value.absent(),
+                Value<String?> folderPath = const Value.absent(),
               }) => TracksTableCompanion.insert(
                 id: id,
                 trackId: trackId,
@@ -1109,6 +1258,8 @@ class $$TracksTableTableTableManager
                 dateAdded: dateAdded,
                 genre: genre,
                 lastScanned: lastScanned,
+                isBlacklisted: isBlacklisted,
+                folderPath: folderPath,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

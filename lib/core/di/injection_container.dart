@@ -50,8 +50,11 @@ Future<void> initializeDependencies() async {
 
   if (!getIt.isRegistered<LocalMusicDatasource>()) {
     debugPrint('[DI] Registering LocalMusicDatasource...');
+    final localMusicDatasource = LocalMusicDatasource();
+    // Inicializar el datasource de lista negra con SharedPreferences
+    localMusicDatasource.init(getIt<SharedPreferences>());
     getIt.registerLazySingleton<LocalMusicDatasource>(
-      () => LocalMusicDatasource(),
+      () => localMusicDatasource,
     );
   }
 

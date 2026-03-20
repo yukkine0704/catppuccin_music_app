@@ -10,6 +10,56 @@ final localMusicDatasourceProvider = Provider<LocalMusicDatasource>((ref) {
   return getIt<LocalMusicDatasource>();
 });
 
+/// State for blacklist management
+class BlacklistState {
+  final List<String> folders;
+  final bool isLoading;
+
+  const BlacklistState({this.folders = const [], this.isLoading = false});
+
+  BlacklistState copyWith({List<String>? folders, bool? isLoading}) {
+    return BlacklistState(
+      folders: folders ?? this.folders,
+      isLoading: isLoading ?? this.isLoading,
+    );
+  }
+}
+
+/// Notifier for managing blacklist state
+class BlacklistNotifier extends StateNotifier<BlacklistState> {
+  final LocalMusicDatasource _datasource;
+
+  BlacklistNotifier(this._datasource) : super(const BlacklistState()) {
+    _loadFolders();
+  }
+
+  void _loadFolders() {
+    state = state.copyWith(folders: _datasource.getBlacklistedFolders());
+  }
+
+  Future<void> addFolder(String folder) async {
+    await _datasource.addFolderToBlacklist(folder);
+    _loadFolders();
+  }
+
+  Future<void> removeFolder(String folder) async {
+    await _datasource.removeFolderFromBlacklist(folder);
+    _loadFolders();
+  }
+
+  Future<void> resetToDefaults() async {
+    await _datasource.resetBlacklistToDefaults();
+    _loadFolders();
+  }
+}
+
+/// Provider for BlacklistNotifier
+final blacklistProvider =
+    StateNotifierProvider<BlacklistNotifier, BlacklistState>((ref) {
+      final datasource = ref.watch(localMusicDatasourceProvider);
+      return BlacklistNotifier(datasource);
+    });
+
 /// Provider for LocalMusicDatabaseDatasource (cache en SQLite).
 final localMusicDatabaseDatasourceProvider =
     Provider<LocalMusicDatabaseDatasource>((ref) {

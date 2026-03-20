@@ -3,13 +3,49 @@ import 'package:audio_metadata_reader/audio_metadata_reader.dart';
 import 'package:dartz/dartz.dart';
 import 'package:flutter/foundation.dart';
 import 'package:photo_manager/photo_manager.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../core/error/failures.dart';
 import '../../domain/entities/track.dart';
+import 'blacklist_datasource.dart';
 
 /// Data source que utiliza photo_manager para interactuar con los archivos
 /// multimedia del sistema de forma moderna y compatible con Android 13+.
 class LocalMusicDatasource {
+  BlacklistDatasource? _blacklistDatasource;
+
+  /// Inicializa el datasource de lista negra
+  void init(SharedPreferences prefs) {
+    _blacklistDatasource = BlacklistDatasource(prefs);
+  }
+
+  /// Obtiene las carpetas bloqueadas
+  List<String> getBlacklistedFolders() {
+    return _blacklistDatasource?.getBlacklistedFolders() ??
+        BlacklistDatasource.defaultBlacklistedFolders;
+  }
+
+  /// Verifica si una carpeta está en la lista negra
+  bool _isFolderBlacklisted(String folderPath) {
+    return _blacklistDatasource?.isFolderBlacklisted(folderPath) ?? false;
+  }
+
+  /// Añade una carpeta a la lista negra
+  Future<bool> addFolderToBlacklist(String folder) {
+    return _blacklistDatasource?.addFolderToBlacklist(folder) ??
+        Future.value(false);
+  }
+
+  /// Elimina una carpeta de la lista negra
+  Future<bool> removeFolderFromBlacklist(String folder) {
+    return _blacklistDatasource?.removeFolderFromBlacklist(folder) ??
+        Future.value(false);
+  }
+
+  /// Restablece la lista negra a los valores por defecto
+  Future<bool> resetBlacklistToDefaults() {
+    return _blacklistDatasource?.resetToDefaults() ?? Future.value(false);
+  }
 
   /// Solicita permisos usando el gestor interno de photo_manager,
   /// el cual ya está adaptado para los permisos granulares de Android modernos.
@@ -111,24 +147,32 @@ class LocalMusicDatasource {
           final trackAlbum = metadata?.album ?? 'Álbum Desconocido';
           final trackYear = metadata?.year?.year ?? asset.createDateTime.year;
 
-          tracks.add(
-            Track(
-              // Convertimos el ID String del sistema a int, o usamos el hashCode como fallback
-              id: int.tryParse(asset.id) ?? asset.id.hashCode,
-              title: trackTitle,
-              artist: trackArtist,
-              album: trackAlbum,
-              filePath: file.path,
-              // photo_manager devuelve la duración en segundos, la pasamos a ms
-              duration: asset.duration * 1000,
-              // Usamos el hash de la ruta relativa (carpeta) para agrupar álbumes temporalmente
-              albumId: asset.relativePath?.hashCode,
-              genre: null,
-              year: trackYear,
-              trackNumber: null,
-              dateAdded: asset.createDateTime.millisecondsSinceEpoch ~/ 1000,
-            ),
-          );
+          // Filtrar carpetas de la lista negra
+          final folderPath = asset.relativePath ?? '';
+          final isBlacklisted = _isFolderBlacklisted(folderPath);
+
+          if (!isBlacklisted) {
+            tracks.add(
+              Track(
+                // Convertimos el ID String del sistema a int, o usamos el hashCode como fallback
+                id: int.tryParse(asset.id) ?? asset.id.hashCode,
+                title: trackTitle,
+                artist: trackArtist,
+                album: trackAlbum,
+                filePath: file.path,
+                // photo_manager devuelve la duración en segundos, la pasamos a ms
+                duration: asset.duration * 1000,
+                // Usamos el hash de la ruta relativa (carpeta) para agrupar álbumes temporalmente
+                albumId: asset.relativePath?.hashCode,
+                genre: null,
+                year: trackYear,
+                trackNumber: null,
+                dateAdded: asset.createDateTime.millisecondsSinceEpoch ~/ 1000,
+              ),
+            );
+          } else {
+            debugPrint('Track bloqueado por lista negra: $folderPath');
+          }
         } else {
           debugPrint(
             'ADVERTENCIA: No se pudo obtener archivo para asset: ${asset.title}',
