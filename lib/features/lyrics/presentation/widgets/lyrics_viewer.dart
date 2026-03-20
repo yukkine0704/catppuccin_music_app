@@ -2,6 +2,7 @@ import 'package:catppuccin_flutter/catppuccin_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../audio_player/presentation/providers/album_accent_provider.dart';
 import '../../../settings/presentation/providers/flavor_provider.dart';
 import '../../domain/entities/lyric_line.dart';
 import '../providers/lyrics_provider.dart';
@@ -91,6 +92,12 @@ class _LyricsViewerState extends ConsumerState<LyricsViewer> {
   }
 
   Widget _buildLyricsList(Flavor flavor, LyricsState lyricsState) {
+    // Get accent color for active line
+    final accentState = ref.watch(albumAccentProvider);
+    final accentColor = accentState.useAlbumColors || accentState.useGenreColors
+        ? accentState.accentColor
+        : flavor.mauve;
+
     // Auto-scroll to current line
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _autoScroll(lyricsState.currentLineIndex);
@@ -109,6 +116,7 @@ class _LyricsViewerState extends ConsumerState<LyricsViewer> {
           itemBuilder: (context, index) {
             return _buildLyricLine(
               flavor,
+              accentColor,
               lyricsState.lyrics[index],
               index == lyricsState.currentLineIndex,
               index,
@@ -121,6 +129,7 @@ class _LyricsViewerState extends ConsumerState<LyricsViewer> {
 
   Widget _buildLyricLine(
     Flavor flavor,
+    Color accentColor,
     LyricLine line,
     bool isActive,
     int index,
@@ -137,7 +146,7 @@ class _LyricsViewerState extends ConsumerState<LyricsViewer> {
           fontSize: isActive ? 22 : 18,
           fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
           color: isActive
-              ? flavor.mauve
+              ? accentColor
               : isPastLine
               ? flavor.subtext0
               : flavor.subtext1,

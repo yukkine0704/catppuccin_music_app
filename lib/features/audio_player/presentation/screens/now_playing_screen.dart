@@ -40,17 +40,30 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen> {
         ? accentState.accentColor
         : flavor.mauve;
 
+    // Get gradient colors for background
+    final gradientColors = _buildGradientColors(flavor, accentColor);
+
     return Scaffold(
       backgroundColor: flavor.base,
-      body: Stack(
-        children: [
-          SafeArea(
-            child: widget.isInSheet
-                ? _buildDraggableContent(flavor, playerState)
-                : _buildStandardContent(flavor, playerState),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: gradientColors,
+            stops: const [0.0, 0.5, 1.0],
           ),
-          const LyricsViewer(),
-        ],
+        ),
+        child: Stack(
+          children: [
+            SafeArea(
+              child: widget.isInSheet
+                  ? _buildDraggableContent(flavor, playerState)
+                  : _buildStandardContent(flavor, playerState),
+            ),
+            const LyricsViewer(),
+          ],
+        ),
       ),
     );
   }
@@ -261,15 +274,22 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen> {
       1.0,
     );
 
+    // Get accent color for progress bar
+    final accentState = ref.watch(albumAccentProvider);
+    final progressAccentColor =
+        accentState.useAlbumColors || accentState.useGenreColors
+        ? accentState.accentColor
+        : flavor.mauve;
+
     return Column(
       children: [
         SliderTheme(
           data: SliderThemeData(
             trackHeight: 4,
-            activeTrackColor: flavor.mauve,
+            activeTrackColor: progressAccentColor,
             inactiveTrackColor: flavor.surface1,
-            thumbColor: flavor.mauve,
-            overlayColor: flavor.mauve.withValues(alpha: 0.1),
+            thumbColor: progressAccentColor,
+            overlayColor: progressAccentColor.withValues(alpha: 0.1),
             thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
             trackShape: const RoundedRectSliderTrackShape(),
           ),
@@ -406,6 +426,24 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen> {
     final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
     final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
     return '$minutes:$seconds';
+  }
+
+  /// Builds gradient colors for subtle background based on album accent.
+  List<Color> _buildGradientColors(Flavor flavor, Color accentColor) {
+    // Create a subtle gradient using the accent color at low opacity
+    // This maintains Catppuccin identity while adding album-based subtlety
+    final accentDarker = HSLColor.fromColor(accentColor)
+        .withLightness(
+          (HSLColor.fromColor(accentColor).lightness - 0.15).clamp(0.0, 1.0),
+        )
+        .toColor()
+        .withValues(alpha: 0.08);
+
+    return [
+      flavor.base,
+      Color.lerp(flavor.base, accentDarker, 0.5)!,
+      flavor.base,
+    ];
   }
 }
 
