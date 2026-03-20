@@ -65,20 +65,26 @@ class _HomeContentScreenState extends ConsumerState<HomeContentScreen> {
   Widget build(BuildContext context) {
     final flavor = ref.watch(flavorProvider);
     final libraryState = ref.watch(libraryProvider);
-    final tracks = ref.watch(filteredTracksProvider);
+    final allTracks = ref.watch(allTracksProvider);
+    final searchQuery = ref.watch(debouncedSearchQueryProvider);
+
+    // Use filtered tracks when searching, all tracks otherwise
+    final tracks = searchQuery.isEmpty
+        ? allTracks
+        : ref.watch(filteredTracksProvider);
 
     // Show loading state
-    if (libraryState.isLoading && tracks.isEmpty) {
+    if (libraryState.isLoading && allTracks.isEmpty) {
       return _buildLoadingState(flavor, libraryState);
     }
 
     // Show permission required state
-    if (libraryState.isPermissionRequired && tracks.isEmpty) {
+    if (libraryState.isPermissionRequired && allTracks.isEmpty) {
       return _buildPermissionRequiredState(flavor);
     }
 
     // Show empty state
-    if (tracks.isEmpty) {
+    if (allTracks.isEmpty) {
       return _buildEmptyState(flavor);
     }
 
@@ -404,7 +410,12 @@ class _HomeContentScreenState extends ConsumerState<HomeContentScreen> {
                     flavor: flavor,
                     onTap: () {
                       // Shuffle all tracks
-                      final tracks = ref.read(filteredTracksProvider);
+                      final searchQuery = ref.read(
+                        debouncedSearchQueryProvider,
+                      );
+                      final tracks = searchQuery.isEmpty
+                          ? ref.read(allTracksProvider)
+                          : ref.read(filteredTracksProvider);
                       if (tracks.isNotEmpty) {
                         final shuffled = List<Track>.from(tracks)..shuffle();
                         ref

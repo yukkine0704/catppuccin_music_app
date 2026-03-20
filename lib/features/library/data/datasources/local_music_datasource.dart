@@ -120,7 +120,12 @@ class LocalMusicDatasource {
 
       debugPrint('Cargando ${audioAssets.length} assets de audio...');
 
+      // DEBUG: Log blacklist status
+      final blacklist = getBlacklistedFolders();
+      debugPrint('DEBUG: Lista negra activa: $blacklist');
+
       final List<Track> tracks = [];
+      int blockedCount = 0;
 
       // 4. Mapeo de AssetEntity a tu entidad Track
       for (var i = 0; i < audioAssets.length; i++) {
@@ -147,9 +152,22 @@ class LocalMusicDatasource {
           final trackAlbum = metadata?.album ?? 'Álbum Desconocido';
           final trackYear = metadata?.year?.year ?? asset.createDateTime.year;
 
+          // DEBUG: Log the relativePath and file path for diagnosis
+          final relativePath = asset.relativePath ?? '';
+          debugPrint(
+            'DEBUG: Track "$trackTitle" - relativePath: "$relativePath" - file.path: "${file.path}"',
+          );
+
           // Filtrar carpetas de la lista negra
-          final folderPath = asset.relativePath ?? '';
-          final isBlacklisted = _isFolderBlacklisted(folderPath);
+          final isBlacklisted = _isFolderBlacklisted(relativePath);
+
+          // DEBUG: Log blacklist check details
+          if (isBlacklisted) {
+            debugPrint(
+              'DEBUG: BLOQUEADO - "$relativePath" coincide con lista negra',
+            );
+            blockedCount++;
+          }
 
           if (!isBlacklisted) {
             tracks.add(
@@ -171,7 +189,7 @@ class LocalMusicDatasource {
               ),
             );
           } else {
-            debugPrint('Track bloqueado por lista negra: $folderPath');
+            debugPrint('Track bloqueado por lista negra: $relativePath');
           }
         } else {
           debugPrint(
@@ -187,7 +205,7 @@ class LocalMusicDatasource {
 
       onProgress?.call(totalFiles, totalFiles);
       debugPrint(
-        'Carga de tracks completada: ${tracks.length} pistas cargadas',
+        'Carga de tracks completada: ${tracks.length} pistas cargadas, $blockedCount bloqueadas por lista negra',
       );
       return Right(tracks);
     } catch (e) {

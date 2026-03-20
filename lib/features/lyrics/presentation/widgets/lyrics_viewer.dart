@@ -1,8 +1,10 @@
 import 'package:catppuccin_flutter/catppuccin_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../audio_player/presentation/providers/album_accent_provider.dart';
+import '../../../audio_player/presentation/providers/audio_player_provider.dart';
 import '../../../settings/presentation/providers/flavor_provider.dart';
 import '../../domain/entities/lyric_line.dart';
 import '../providers/lyrics_provider.dart';
@@ -85,10 +87,53 @@ class _LyricsViewerState extends ConsumerState<LyricsViewer> {
               'Place a .lrc file next to the audio file',
               style: TextStyle(color: flavor.subtext0, fontSize: 14),
             ),
+            const SizedBox(height: 24),
+            _buildSearchLyricsButton(flavor),
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildSearchLyricsButton(Flavor flavor) {
+    return ElevatedButton.icon(
+      onPressed: _searchLyricsOnGoogle,
+      icon: const Icon(Icons.search),
+      label: const Text('Search on Google'),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: flavor.mauve,
+        foregroundColor: flavor.base,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      ),
+    );
+  }
+
+  Future<void> _searchLyricsOnGoogle() async {
+    final playerState = ref.read(audioPlayerProvider);
+    final currentTrack = playerState.currentTrack;
+
+    if (currentTrack == null) {
+      return;
+    }
+
+    final artist = currentTrack.artist;
+    final title = currentTrack.title;
+
+    if (artist.isEmpty && title.isEmpty) {
+      return;
+    }
+
+    // Build search query with artist + title + lyrics
+    final query = Uri.encodeComponent('$artist $title lyrics');
+    final url = Uri.parse('https://www.google.com/search?q=$query');
+
+    try {
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      debugPrint('[LyricsViewer] Error launching URL: $e');
+    }
   }
 
   Widget _buildLyricsList(Flavor flavor, LyricsState lyricsState) {

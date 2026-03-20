@@ -310,6 +310,13 @@ final searchFilterProvider = StateProvider<SearchFilterType>(
 final debouncedSearchQueryProvider = StateProvider<String>((ref) => '');
 
 /// Provider for filtered tracks based on search.
+/// Provider for all tracks (used by home screen when no search is active).
+final allTracksProvider = Provider<List<Track>>((ref) {
+  final state = ref.watch(libraryProvider);
+  return state.tracks;
+});
+
+/// Provider for filtered tracks based on search query.
 final filteredTracksProvider = Provider<List<Track>>((ref) {
   final state = ref.watch(libraryProvider);
   final query = ref.watch(debouncedSearchQueryProvider).toLowerCase();

@@ -31,7 +31,10 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   Widget build(BuildContext context) {
     final flavor = ref.watch(flavorProvider);
     final libraryState = ref.watch(libraryProvider);
-    final tracks = ref.watch(filteredTracksProvider);
+    final searchQuery = ref.watch(debouncedSearchQueryProvider);
+    final allTracks = ref.watch(allTracksProvider);
+    final filteredTracks = ref.watch(filteredTracksProvider);
+    final tracks = searchQuery.isEmpty ? allTracks : filteredTracks;
 
     return Scaffold(
       backgroundColor: flavor.base,
@@ -181,7 +184,10 @@ class _TrackListTile extends ConsumerWidget {
         ),
         onPressed: () {
           // Play the track
-          final tracks = ref.read(filteredTracksProvider);
+          final searchQuery = ref.read(debouncedSearchQueryProvider);
+          final allTracks = ref.read(allTracksProvider);
+          final filteredTracks = ref.read(filteredTracksProvider);
+          final tracks = searchQuery.isEmpty ? allTracks : filteredTracks;
           final index = tracks.indexOf(track);
           ref
               .read(audioPlayerProvider.notifier)
@@ -190,7 +196,10 @@ class _TrackListTile extends ConsumerWidget {
       ),
       onTap: () {
         // Play the track
-        final tracks = ref.read(filteredTracksProvider);
+        final searchQuery = ref.read(debouncedSearchQueryProvider);
+        final allTracks = ref.read(allTracksProvider);
+        final filteredTracks = ref.read(filteredTracksProvider);
+        final tracks = searchQuery.isEmpty ? allTracks : filteredTracks;
         final index = tracks.indexOf(track);
         ref
             .read(audioPlayerProvider.notifier)
