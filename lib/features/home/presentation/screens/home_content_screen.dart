@@ -9,6 +9,7 @@ import '../../../audio_player/presentation/providers/history_provider.dart';
 import '../../../library/domain/entities/track.dart';
 import '../../../library/presentation/providers/library_provider.dart';
 import '../../../settings/presentation/providers/flavor_provider.dart';
+import '../../../smart_playlists/presentation/screens/smart_playlists_screen.dart';
 import 'history_screen.dart';
 import 'most_played_screen.dart';
 
@@ -361,11 +362,16 @@ class _HomeContentScreenState extends ConsumerState<HomeContentScreen> {
                     },
                   ),
                   _QuickActionButton(
-                    icon: Icons.favorite_rounded,
-                    label: 'Favoritos',
+                    icon: Icons.auto_awesome_rounded,
+                    label: 'Smart Playlists',
                     flavor: flavor,
                     onTap: () {
-                      // TODO: Navigate to favorites
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const SmartPlaylistsScreen(),
+                        ),
+                      );
                     },
                   ),
                   _QuickActionButton(

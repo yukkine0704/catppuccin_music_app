@@ -114,6 +114,37 @@ class AppDatabase extends _$AppDatabase {
         ))
         .get();
   }
+
+  // ============================================================
+  // SMART PLAYLISTS - Consultas dinámicas
+  // ============================================================
+
+  /// Obtiene las últimas canciones añadidas a la biblioteca
+  Future<List<TracksTableData>> getRecentlyAddedTracks(int limit) {
+    return (select(tracksTable)
+          ..where((t) => t.dateAdded.isNotNull())
+          ..orderBy([(t) => OrderingTerm.desc(t.dateAdded)])
+          ..limit(limit))
+        .get();
+  }
+
+  /// Obtiene las canciones más escuchadas
+  Future<List<TracksTableData>> getMostPlayedTracks(int limit) {
+    return (select(tracksTable)
+          ..where((t) => t.playCount.isBiggerThanValue(0))
+          ..orderBy([(t) => OrderingTerm.desc(t.playCount)])
+          ..limit(limit))
+        .get();
+  }
+
+  /// Incrementa el contador de reproducciones de una pista
+  Future<int> incrementPlayCount(int trackId) async {
+    final track = await getTrackById(trackId);
+    if (track == null) return 0;
+    return (update(tracksTable)..where((t) => t.trackId.equals(trackId))).write(
+      TracksTableCompanion(playCount: Value(track.playCount + 1)),
+    );
+  }
 }
 
 /// Abre la conexión a la base de datos SQLite

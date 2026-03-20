@@ -19,6 +19,7 @@ class Track {
   final int?
   dateAdded; // Cambiado a int? para coincidir con el timestamp de MediaStore
   final String? genre;
+  final int playCount;
 
   const Track({
     required this.id,
@@ -32,6 +33,7 @@ class Track {
     this.year,
     this.dateAdded,
     this.genre,
+    this.playCount = 0,
   });
 
   /// Determina si la canción tiene información de álbum para intentar cargar una carátula.
@@ -50,6 +52,7 @@ class Track {
     int? year,
     int? dateAdded,
     String? genre,
+    int? playCount,
   }) {
     return Track(
       id: id ?? this.id,
@@ -63,6 +66,7 @@ class Track {
       year: year ?? this.year,
       dateAdded: dateAdded ?? this.dateAdded,
       genre: genre ?? this.genre,
+      playCount: playCount ?? this.playCount,
     );
   }
 

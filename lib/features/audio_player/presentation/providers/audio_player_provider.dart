@@ -2,6 +2,7 @@ import 'package:audio_service/audio_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/database/database.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../../library/domain/entities/track.dart';
 import '../../data/datasources/audio_player_service.dart';
@@ -105,7 +106,25 @@ class AudioPlayerNotifier extends StateNotifier<PlayerState> {
         queue: service.trackQueue,
         currentTrackIndex: service.currentTrackIndex,
       );
+
+      // Increment play count for the new track
+      if (track != null) {
+        _incrementPlayCount(track.id);
+      }
     });
+  }
+
+  /// Increments the play count for a track
+  Future<void> _incrementPlayCount(int trackId) async {
+    try {
+      final database = getIt<AppDatabase>();
+      await database.incrementPlayCount(trackId);
+      debugPrint(
+        '[AudioPlayerNotifier] Incremented play count for track: $trackId',
+      );
+    } catch (e) {
+      debugPrint('[AudioPlayerNotifier] Error incrementing play count: $e');
+    }
   }
 
   /// Plays a list of tracks.

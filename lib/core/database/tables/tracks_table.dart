@@ -48,4 +48,7 @@ class TracksTable extends Table {
 
   /// Ruta de la carpeta donde está ubicada la pista
   TextColumn get folderPath => text().nullable()();
+
+  /// Contador de reproducciones de la pista
+  IntColumn get playCount => integer().withDefault(const Constant(0))();
 }

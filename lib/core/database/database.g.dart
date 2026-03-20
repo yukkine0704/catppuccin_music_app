@@ -171,6 +171,18 @@ class $TracksTableTable extends TracksTable
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _playCountMeta = const VerificationMeta(
+    'playCount',
+  );
+  @override
+  late final GeneratedColumn<int> playCount = GeneratedColumn<int>(
+    'play_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -188,6 +200,7 @@ class $TracksTableTable extends TracksTable
     lastScanned,
     isBlacklisted,
     folderPath,
+    playCount,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -311,6 +324,12 @@ class $TracksTableTable extends TracksTable
         folderPath.isAcceptableOrUnknown(data['folder_path']!, _folderPathMeta),
       );
     }
+    if (data.containsKey('play_count')) {
+      context.handle(
+        _playCountMeta,
+        playCount.isAcceptableOrUnknown(data['play_count']!, _playCountMeta),
+      );
+    }
     return context;
   }
 
@@ -380,6 +399,10 @@ class $TracksTableTable extends TracksTable
         DriftSqlType.string,
         data['${effectivePrefix}folder_path'],
       ),
+      playCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}play_count'],
+      )!,
     );
   }
 
@@ -434,6 +457,9 @@ class TracksTableData extends DataClass implements Insertable<TracksTableData> {
 
   /// Ruta de la carpeta donde está ubicada la pista
   final String? folderPath;
+
+  /// Contador de reproducciones de la pista
+  final int playCount;
   const TracksTableData({
     required this.id,
     required this.trackId,
@@ -450,6 +476,7 @@ class TracksTableData extends DataClass implements Insertable<TracksTableData> {
     required this.lastScanned,
     required this.isBlacklisted,
     this.folderPath,
+    required this.playCount,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -481,6 +508,7 @@ class TracksTableData extends DataClass implements Insertable<TracksTableData> {
     if (!nullToAbsent || folderPath != null) {
       map['folder_path'] = Variable<String>(folderPath);
     }
+    map['play_count'] = Variable<int>(playCount);
     return map;
   }
 
@@ -511,6 +539,7 @@ class TracksTableData extends DataClass implements Insertable<TracksTableData> {
       folderPath: folderPath == null && nullToAbsent
           ? const Value.absent()
           : Value(folderPath),
+      playCount: Value(playCount),
     );
   }
 
@@ -535,6 +564,7 @@ class TracksTableData extends DataClass implements Insertable<TracksTableData> {
       lastScanned: serializer.fromJson<int>(json['lastScanned']),
       isBlacklisted: serializer.fromJson<bool>(json['isBlacklisted']),
       folderPath: serializer.fromJson<String?>(json['folderPath']),
+      playCount: serializer.fromJson<int>(json['playCount']),
     );
   }
   @override
@@ -556,6 +586,7 @@ class TracksTableData extends DataClass implements Insertable<TracksTableData> {
       'lastScanned': serializer.toJson<int>(lastScanned),
       'isBlacklisted': serializer.toJson<bool>(isBlacklisted),
       'folderPath': serializer.toJson<String?>(folderPath),
+      'playCount': serializer.toJson<int>(playCount),
     };
   }
 
@@ -575,6 +606,7 @@ class TracksTableData extends DataClass implements Insertable<TracksTableData> {
     int? lastScanned,
     bool? isBlacklisted,
     Value<String?> folderPath = const Value.absent(),
+    int? playCount,
   }) => TracksTableData(
     id: id ?? this.id,
     trackId: trackId ?? this.trackId,
@@ -591,6 +623,7 @@ class TracksTableData extends DataClass implements Insertable<TracksTableData> {
     lastScanned: lastScanned ?? this.lastScanned,
     isBlacklisted: isBlacklisted ?? this.isBlacklisted,
     folderPath: folderPath.present ? folderPath.value : this.folderPath,
+    playCount: playCount ?? this.playCount,
   );
   TracksTableData copyWithCompanion(TracksTableCompanion data) {
     return TracksTableData(
@@ -617,6 +650,7 @@ class TracksTableData extends DataClass implements Insertable<TracksTableData> {
       folderPath: data.folderPath.present
           ? data.folderPath.value
           : this.folderPath,
+      playCount: data.playCount.present ? data.playCount.value : this.playCount,
     );
   }
 
@@ -637,7 +671,8 @@ class TracksTableData extends DataClass implements Insertable<TracksTableData> {
           ..write('genre: $genre, ')
           ..write('lastScanned: $lastScanned, ')
           ..write('isBlacklisted: $isBlacklisted, ')
-          ..write('folderPath: $folderPath')
+          ..write('folderPath: $folderPath, ')
+          ..write('playCount: $playCount')
           ..write(')'))
         .toString();
   }
@@ -659,6 +694,7 @@ class TracksTableData extends DataClass implements Insertable<TracksTableData> {
     lastScanned,
     isBlacklisted,
     folderPath,
+    playCount,
   );
   @override
   bool operator ==(Object other) =>
@@ -678,7 +714,8 @@ class TracksTableData extends DataClass implements Insertable<TracksTableData> {
           other.genre == this.genre &&
           other.lastScanned == this.lastScanned &&
           other.isBlacklisted == this.isBlacklisted &&
-          other.folderPath == this.folderPath);
+          other.folderPath == this.folderPath &&
+          other.playCount == this.playCount);
 }
 
 class TracksTableCompanion extends UpdateCompanion<TracksTableData> {
@@ -697,6 +734,7 @@ class TracksTableCompanion extends UpdateCompanion<TracksTableData> {
   final Value<int> lastScanned;
   final Value<bool> isBlacklisted;
   final Value<String?> folderPath;
+  final Value<int> playCount;
   const TracksTableCompanion({
     this.id = const Value.absent(),
     this.trackId = const Value.absent(),
@@ -713,6 +751,7 @@ class TracksTableCompanion extends UpdateCompanion<TracksTableData> {
     this.lastScanned = const Value.absent(),
     this.isBlacklisted = const Value.absent(),
     this.folderPath = const Value.absent(),
+    this.playCount = const Value.absent(),
   });
   TracksTableCompanion.insert({
     this.id = const Value.absent(),
@@ -730,6 +769,7 @@ class TracksTableCompanion extends UpdateCompanion<TracksTableData> {
     required int lastScanned,
     this.isBlacklisted = const Value.absent(),
     this.folderPath = const Value.absent(),
+    this.playCount = const Value.absent(),
   }) : trackId = Value(trackId),
        title = Value(title),
        artist = Value(artist),
@@ -753,6 +793,7 @@ class TracksTableCompanion extends UpdateCompanion<TracksTableData> {
     Expression<int>? lastScanned,
     Expression<bool>? isBlacklisted,
     Expression<String>? folderPath,
+    Expression<int>? playCount,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -770,6 +811,7 @@ class TracksTableCompanion extends UpdateCompanion<TracksTableData> {
       if (lastScanned != null) 'last_scanned': lastScanned,
       if (isBlacklisted != null) 'is_blacklisted': isBlacklisted,
       if (folderPath != null) 'folder_path': folderPath,
+      if (playCount != null) 'play_count': playCount,
     });
   }
 
@@ -789,6 +831,7 @@ class TracksTableCompanion extends UpdateCompanion<TracksTableData> {
     Value<int>? lastScanned,
     Value<bool>? isBlacklisted,
     Value<String?>? folderPath,
+    Value<int>? playCount,
   }) {
     return TracksTableCompanion(
       id: id ?? this.id,
@@ -806,6 +849,7 @@ class TracksTableCompanion extends UpdateCompanion<TracksTableData> {
       lastScanned: lastScanned ?? this.lastScanned,
       isBlacklisted: isBlacklisted ?? this.isBlacklisted,
       folderPath: folderPath ?? this.folderPath,
+      playCount: playCount ?? this.playCount,
     );
   }
 
@@ -857,6 +901,9 @@ class TracksTableCompanion extends UpdateCompanion<TracksTableData> {
     if (folderPath.present) {
       map['folder_path'] = Variable<String>(folderPath.value);
     }
+    if (playCount.present) {
+      map['play_count'] = Variable<int>(playCount.value);
+    }
     return map;
   }
 
@@ -877,7 +924,8 @@ class TracksTableCompanion extends UpdateCompanion<TracksTableData> {
           ..write('genre: $genre, ')
           ..write('lastScanned: $lastScanned, ')
           ..write('isBlacklisted: $isBlacklisted, ')
-          ..write('folderPath: $folderPath')
+          ..write('folderPath: $folderPath, ')
+          ..write('playCount: $playCount')
           ..write(')'))
         .toString();
   }
@@ -911,6 +959,7 @@ typedef $$TracksTableTableCreateCompanionBuilder =
       required int lastScanned,
       Value<bool> isBlacklisted,
       Value<String?> folderPath,
+      Value<int> playCount,
     });
 typedef $$TracksTableTableUpdateCompanionBuilder =
     TracksTableCompanion Function({
@@ -929,6 +978,7 @@ typedef $$TracksTableTableUpdateCompanionBuilder =
       Value<int> lastScanned,
       Value<bool> isBlacklisted,
       Value<String?> folderPath,
+      Value<int> playCount,
     });
 
 class $$TracksTableTableFilterComposer
@@ -1012,6 +1062,11 @@ class $$TracksTableTableFilterComposer
 
   ColumnFilters<String> get folderPath => $composableBuilder(
     column: $table.folderPath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get playCount => $composableBuilder(
+    column: $table.playCount,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -1099,6 +1154,11 @@ class $$TracksTableTableOrderingComposer
     column: $table.folderPath,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get playCount => $composableBuilder(
+    column: $table.playCount,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$TracksTableTableAnnotationComposer
@@ -1162,6 +1222,9 @@ class $$TracksTableTableAnnotationComposer
     column: $table.folderPath,
     builder: (column) => column,
   );
+
+  GeneratedColumn<int> get playCount =>
+      $composableBuilder(column: $table.playCount, builder: (column) => column);
 }
 
 class $$TracksTableTableTableManager
@@ -1210,6 +1273,7 @@ class $$TracksTableTableTableManager
                 Value<int> lastScanned = const Value.absent(),
                 Value<bool> isBlacklisted = const Value.absent(),
                 Value<String?> folderPath = const Value.absent(),
+                Value<int> playCount = const Value.absent(),
               }) => TracksTableCompanion(
                 id: id,
                 trackId: trackId,
@@ -1226,6 +1290,7 @@ class $$TracksTableTableTableManager
                 lastScanned: lastScanned,
                 isBlacklisted: isBlacklisted,
                 folderPath: folderPath,
+                playCount: playCount,
               ),
           createCompanionCallback:
               ({
@@ -1244,6 +1309,7 @@ class $$TracksTableTableTableManager
                 required int lastScanned,
                 Value<bool> isBlacklisted = const Value.absent(),
                 Value<String?> folderPath = const Value.absent(),
+                Value<int> playCount = const Value.absent(),
               }) => TracksTableCompanion.insert(
                 id: id,
                 trackId: trackId,
@@ -1260,6 +1326,7 @@ class $$TracksTableTableTableManager
                 lastScanned: lastScanned,
                 isBlacklisted: isBlacklisted,
                 folderPath: folderPath,
+                playCount: playCount,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
