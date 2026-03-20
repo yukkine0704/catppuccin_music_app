@@ -10,6 +10,8 @@ import '../../features/library/data/repositories/artwork_repository.dart';
 import '../../features/metadata_fetcher/data/datasources/metadata_fetcher_datasource.dart';
 import '../../features/settings/data/datasources/shared_prefs_datasource.dart';
 import '../../features/settings/data/repositories/settings_repository.dart';
+import '../../features/tag_editor/data/datasources/tag_editor_datasource.dart';
+import '../../features/tag_editor/data/repositories/tag_editor_repository_impl.dart';
 import '../database/database.dart';
 
 final getIt = GetIt.instance;
@@ -90,6 +92,21 @@ Future<void> initializeDependencies() async {
   if (!getIt.isRegistered<ArtworkRepository>()) {
     debugPrint('[DI] Registering ArtworkRepository...');
     getIt.registerLazySingleton<ArtworkRepository>(() => ArtworkRepository());
+  }
+
+  // Tag Editor
+  if (!getIt.isRegistered<TagEditorDatasource>()) {
+    debugPrint('[DI] Registering TagEditorDatasource...');
+    getIt.registerLazySingleton<TagEditorDatasource>(
+      () => TagEditorDatasource(getIt<AppDatabase>()),
+    );
+  }
+
+  if (!getIt.isRegistered<TagEditorRepository>()) {
+    debugPrint('[DI] Registering TagEditorRepository...');
+    getIt.registerLazySingleton<TagEditorRepository>(
+      () => TagEditorRepository(getIt<TagEditorDatasource>()),
+    );
   }
 
   debugPrint('[DI] Dependency injection complete');

@@ -1,9 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/di/injection_container.dart';
 import '../../data/datasources/local_music_database_datasource.dart';
 import '../../data/datasources/local_music_datasource.dart';
 import '../../domain/entities/track.dart';
+
+/// Tipos de filtro para la búsqueda
+enum SearchFilterType { all, artists, albums, songs }
 
 /// Provider for LocalMusicDatasource (escaneo del sistema de archivos).
 final localMusicDatasourceProvider = Provider<LocalMusicDatasource>((ref) {
@@ -296,20 +301,56 @@ final libraryProvider = StateNotifierProvider<LibraryNotifier, LibraryState>((
 /// Provider for searching tracks (works with cached data).
 final searchQueryProvider = StateProvider<String>((ref) => '');
 
+/// Provider for search filter type
+final searchFilterProvider = StateProvider<SearchFilterType>(
+  (ref) => SearchFilterType.all,
+);
+
+/// Provider for debounced search query
+final debouncedSearchQueryProvider = StateProvider<String>((ref) => '');
+
 /// Provider for filtered tracks based on search.
 final filteredTracksProvider = Provider<List<Track>>((ref) {
   final state = ref.watch(libraryProvider);
-  final query = ref.watch(searchQueryProvider).toLowerCase();
+  final query = ref.watch(debouncedSearchQueryProvider).toLowerCase();
+  final filter = ref.watch(searchFilterProvider);
 
   if (query.isEmpty) {
-    return state.tracks;
+    return [];
   }
 
   return state.tracks.where((track) {
-    return track.title.toLowerCase().contains(query) ||
-        track.artist.toLowerCase().contains(query) ||
-        track.album.toLowerCase().contains(query);
+    final titleMatch = track.title.toLowerCase().contains(query);
+    final artistMatch = track.artist.toLowerCase().contains(query);
+    final albumMatch = track.album.toLowerCase().contains(query);
+
+    switch (filter) {
+      case SearchFilterType.all:
+        return titleMatch || artistMatch || albumMatch;
+      case SearchFilterType.artists:
+        return artistMatch;
+      case SearchFilterType.albums:
+        return albumMatch;
+      case SearchFilterType.songs:
+        return titleMatch;
+    }
   }).toList();
+});
+
+/// Provider for unique artists from search results
+final searchedArtistsProvider = Provider<List<String>>((ref) {
+  final tracks = ref.watch(filteredTracksProvider);
+  final artists = tracks.map((t) => t.artist).toSet().toList();
+  artists.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+  return artists;
+});
+
+/// Provider for unique albums from search results
+final searchedAlbumsProvider = Provider<List<String>>((ref) {
+  final tracks = ref.watch(filteredTracksProvider);
+  final albums = tracks.map((t) => t.album).toSet().toList();
+  albums.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+  return albums;
 });
 
 /// Provider for tracks sorted by date added (newest first).

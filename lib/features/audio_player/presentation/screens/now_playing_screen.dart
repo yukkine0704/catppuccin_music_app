@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:button_group_m3e/button_group_m3e.dart'; // Asegúrate de tener la ruta correcta a tu ButtonGroupM3E
+import 'package:button_group_m3e/button_group_m3e.dart';
 import 'package:button_m3e/button_m3e.dart';
 import 'package:catppuccin_flutter/catppuccin_flutter.dart';
 import 'package:flutter/material.dart';
@@ -9,6 +9,7 @@ import 'package:icon_button_m3e/icon_button_m3e.dart';
 
 import '../../../../shared/widgets/album_art_widget.dart';
 import '../../../settings/presentation/providers/flavor_provider.dart';
+import '../../../tag_editor/presentation/screens/tag_editor_screen.dart';
 import '../providers/album_accent_provider.dart';
 import '../providers/audio_player_provider.dart';
 
@@ -131,13 +132,65 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen> {
             ),
           ),
 
-          // Variante Tonal para hacer simetría visual
-          IconButtonM3E(
-            variant: IconButtonM3EVariant.tonal,
-            size: IconButtonM3ESize.md,
-            icon: Icon(Icons.queue_music_rounded, color: flavor.text),
-            onPressed: () {},
-            tooltip: 'Queue',
+          // Menú con más opciones
+          PopupMenuButton<String>(
+            icon: Icon(Icons.more_vert_rounded, color: flavor.text),
+            color: flavor.surface1,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            onSelected: (value) async {
+              final currentPlayerState = ref.read(audioPlayerProvider);
+              if (value == 'edit_tags') {
+                final currentTrack = currentPlayerState.currentTrack;
+                if (currentTrack != null) {
+                  final result = await Navigator.of(context).push<bool>(
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          TagEditorScreen(filePath: currentTrack.filePath),
+                    ),
+                  );
+                  if (result == true) {
+                    // Los metadatos se guardaron, recargar la información
+                    // El provider se encargará de actualizar
+                  }
+                }
+              } else if (value == 'queue') {
+                // Implementar cola de reproducción
+              }
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem<String>(
+                value: 'edit_tags',
+                child: Row(
+                  children: [
+                    Icon(Icons.edit_rounded, color: flavor.text, size: 20),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Editar etiquetas',
+                      style: TextStyle(color: flavor.text),
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'queue',
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.queue_music_rounded,
+                      color: flavor.text,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Cola de reproducción',
+                      style: TextStyle(color: flavor.text),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),

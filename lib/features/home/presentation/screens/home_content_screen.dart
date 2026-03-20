@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:catppuccin_flutter/catppuccin_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,13 +10,11 @@ import '../../../audio_player/presentation/providers/audio_player_provider.dart'
 import '../../../audio_player/presentation/providers/history_provider.dart';
 import '../../../library/domain/entities/track.dart';
 import '../../../library/presentation/providers/library_provider.dart';
+import '../../../search/presentation/screens/search_screen.dart';
 import '../../../settings/presentation/providers/flavor_provider.dart';
 import '../../../smart_playlists/presentation/screens/smart_playlists_screen.dart';
 import 'history_screen.dart';
 import 'most_played_screen.dart';
-
-/// Provider for search query state.
-final searchQueryProvider = StateProvider<String>((ref) => '');
 
 /// Home content screen with CustomScrollView layout.
 /// Features: Header, Search, Carousel, Quick Actions, Recently Played
@@ -244,7 +244,18 @@ class _HomeContentScreenState extends ConsumerState<HomeContentScreen> {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: _SearchBarM3E(flavor: flavor),
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const SearchScreen(),
+                    ),
+                  );
+                },
+                child: AbsorbPointer(
+                  child: _SearchBarM3E(flavor: flavor),
+                ),
+              ),
             ),
           ),
 
@@ -1032,6 +1043,7 @@ class _SearchBarM3E extends ConsumerStatefulWidget {
 
 class _SearchBarM3EState extends ConsumerState<_SearchBarM3E> {
   late final TextEditingController _controller;
+  Timer? _debounceTimer;
 
   @override
   void initState() {
@@ -1042,7 +1054,28 @@ class _SearchBarM3EState extends ConsumerState<_SearchBarM3E> {
   @override
   void dispose() {
     _controller.dispose();
+    _debounceTimer?.cancel();
     super.dispose();
+  }
+
+  void _onSearchChanged(String value) {
+    // Cancel previous timer
+    _debounceTimer?.cancel();
+
+    // Update immediately for UI feedback
+    ref.read(searchQueryProvider.notifier).state = value;
+
+    // Debounce the actual search (300ms)
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+      ref.read(debouncedSearchQueryProvider.notifier).state = value;
+    });
+  }
+
+  void _clearSearch() {
+    _controller.clear();
+    _debounceTimer?.cancel();
+    ref.read(searchQueryProvider.notifier).state = '';
+    ref.read(debouncedSearchQueryProvider.notifier).state = '';
   }
 
   @override
@@ -1062,9 +1095,7 @@ class _SearchBarM3EState extends ConsumerState<_SearchBarM3E> {
           Expanded(
             child: TextField(
               controller: _controller,
-              onChanged: (value) {
-                ref.read(searchQueryProvider.notifier).state = value;
-              },
+              onChanged: _onSearchChanged,
               style: TextStyle(color: widget.flavor.text, fontSize: 16),
               decoration: InputDecoration(
                 hintText: 'Buscar canciones, artistas...',
@@ -1085,10 +1116,7 @@ class _SearchBarM3EState extends ConsumerState<_SearchBarM3E> {
                 color: widget.flavor.subtext1,
                 size: 20,
               ),
-              onPressed: () {
-                _controller.clear();
-                ref.read(searchQueryProvider.notifier).state = '';
-              },
+              onPressed: _clearSearch,
               tooltip: 'Limpiar',
             )
           else
