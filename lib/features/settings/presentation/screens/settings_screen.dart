@@ -73,7 +73,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         flavor: flavor,
                         trailing: Switch(
                           value: _darkMode,
-                          activeColor: flavor.mauve,
+                          activeThumbColor: flavor.mauve,
                           onChanged: (value) =>
                               setState(() => _darkMode = value),
                         ),
