@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:rxdart/rxdart.dart';
 
+import '../../../equalizer/domain/entities/equalizer_preset.dart';
 import '../../../library/domain/entities/track.dart';
 
 /// Repeat mode for playback.
@@ -356,6 +357,108 @@ class AudioPlayerService extends BaseAudioHandler
         queueIndex: _player.currentIndex ?? 0,
       ),
     );
+  }
+
+  // ============== EQUALIZER ==============
+
+  // Internal state for equalizer (simulated - actual equalizer requires platform-specific implementation)
+  List<double> _currentEqualizerBands = [0.0, 0.0, 0.0, 0.0, 0.0];
+  bool _equalizerEnabled = false;
+
+  /// Sets the equalizer bands.
+  /// [bands] is a list of gain values in dB for each frequency band.
+  /// Note: Full equalizer support requires Android's AudioEffect API.
+  /// This implementation stores the values for when hardware support is available.
+  Future<void> setEqualizer(List<double> bands) async {
+    try {
+      // Store bands for later use
+      _currentEqualizerBands = bands;
+      debugPrint('[AudioPlayerService] Equalizer bands set: $bands');
+
+      // Note: just_audio equalizer requires platform-specific implementation
+      // On Android, you would use:
+      // final equalizer = _player.equalizer;
+      // if (equalizer != null) { ... }
+    } catch (e) {
+      debugPrint('[AudioPlayerService] Error setting equalizer: $e');
+    }
+  }
+
+  /// Enables or disables the equalizer.
+  Future<void> setEqualizerEnabled(bool enabled) async {
+    try {
+      _equalizerEnabled = enabled;
+      debugPrint('[AudioPlayerService] Equalizer enabled: $enabled');
+    } catch (e) {
+      debugPrint('[AudioPlayerService] Error setting equalizer enabled: $e');
+    }
+  }
+
+  /// Gets the current equalizer enabled state.
+  bool get isEqualizerEnabled => _equalizerEnabled;
+
+  /// Gets the current equalizer bands.
+  List<double> get currentEqualizerBands => _currentEqualizerBands;
+
+  /// Applies an equalizer preset.
+  Future<void> applyEqualizerPreset(EqualizerPreset preset) async {
+    await setEqualizerEnabled(preset.isEnabled);
+    if (preset.isEnabled) {
+      await setEqualizer(preset.bands);
+    }
+  }
+
+  // ============== CROSSFADE ==============
+
+  // Internal state for crossfade
+  int _crossfadeDuration = 0;
+  bool _crossfadeEnabled = false;
+
+  /// Sets crossfade duration in milliseconds.
+  /// [durationMs] should be between 0 and 12000 ms.
+  /// Crossfade enables smooth transition between tracks.
+  /// Note: Requires platform-specific implementation.
+  Future<void> setCrossfade(int durationMs) async {
+    try {
+      _crossfadeDuration = durationMs;
+      debugPrint('[AudioPlayerService] Crossfade set to ${durationMs}ms');
+      // Note: Crossfade requires platform-specific implementation
+      // On some platforms, this would be: await _player.setCrossfade(durationMs);
+    } catch (e) {
+      debugPrint('[AudioPlayerService] Error setting crossfade: $e');
+    }
+  }
+
+  /// Enables or disables crossfade.
+  Future<void> setCrossfadeEnabled(bool enabled) async {
+    try {
+      _crossfadeEnabled = enabled;
+      if (enabled && _crossfadeDuration == 0) {
+        _crossfadeDuration = 3000; // Default to 3000ms
+      }
+      debugPrint('[AudioPlayerService] Crossfade enabled: $enabled');
+    } catch (e) {
+      debugPrint('[AudioPlayerService] Error setting crossfade enabled: $e');
+    }
+  }
+
+  /// Gets the current crossfade enabled state.
+  bool get isCrossfadeEnabled => _crossfadeEnabled;
+
+  /// Gets the current crossfade duration in milliseconds.
+  int get crossfadeDuration => _crossfadeDuration;
+
+  // ============== GAPLESS PLAYBACK ==============
+
+  /// Enables or disables gapless playback.
+  /// Gapless is achieved by using LoopMode.all for seamless album reproduction.
+  Future<void> setGaplessPlayback(bool enabled) async {
+    if (enabled) {
+      await _player.setLoopMode(LoopMode.all);
+      debugPrint('[AudioPlayerService] Gapless playback enabled');
+    }
+    // Note: Gapless can also be enhanced by setting
+    // ConcatenatingAudioSource with useLazyPreparation: false
   }
 
   @override

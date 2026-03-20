@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'core/di/injection_container.dart';
 import 'core/theme/catppuccin_theme.dart';
 import 'features/audio_player/data/datasources/audio_player_service.dart';
+import 'features/equalizer/presentation/providers/equalizer_provider.dart';
 import 'features/home/presentation/screens/home_screen.dart';
 import 'features/settings/presentation/providers/flavor_provider.dart';
 
@@ -18,6 +20,9 @@ void main() async {
     debugPrint('[MAIN] Initializing dependencies for the first time...');
     await initializeDependencies();
   }
+
+  // Initialize SharedPreferences for equalizer settings
+  final prefs = await SharedPreferences.getInstance();
 
   // Google Fonts Cache (lightweight, runs in main isolate)
   try {
@@ -43,7 +48,12 @@ void main() async {
     getIt.registerSingleton<AudioHandler>(audioHandler);
   }
 
-  runApp(const ProviderScope(child: TheVinylSanctuaryApp()));
+  runApp(
+    ProviderScope(
+      overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+      child: const TheVinylSanctuaryApp(),
+    ),
+  );
 }
 
 class TheVinylSanctuaryApp extends ConsumerWidget {

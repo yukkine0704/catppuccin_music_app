@@ -7,6 +7,8 @@ import 'package:m3e_collection/m3e_collection.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../audio_player/presentation/providers/player_animation_provider.dart';
+import '../../../equalizer/presentation/providers/equalizer_provider.dart';
+import '../../../equalizer/presentation/screens/equalizer_screen.dart';
 import '../../../library/presentation/providers/library_provider.dart';
 import '../providers/flavor_provider.dart';
 
@@ -109,6 +111,32 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           onChanged: (v) => setState(() => _playbackSpeed = v),
                         ),
                       ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // --- SECCIÓN AUDIO ---
+                  _buildM3ESectionHeader('Audio', flavor),
+                  _buildSettingsContainer(
+                    flavor: flavor,
+                    children: [
+                      _buildSettingsTile(
+                        title: 'Ecualizador',
+                        subtitle: 'Ajustes de ecualización',
+                        flavor: flavor,
+                        trailing: IconButtonM3E(
+                          variant: IconButtonM3EVariant.standard,
+                          size: IconButtonM3ESize.sm,
+                          icon: const Icon(Icons.equalizer),
+                          onPressed: () =>
+                              _navigateToEqualizer(context, ref, flavor),
+                        ),
+                      ),
+                      const Divider(height: 1, indent: 16, endIndent: 16),
+                      _buildCrossfadeTile(ref, flavor),
+                      const Divider(height: 1, indent: 16, endIndent: 16),
+                      _buildGaplessTile(ref, flavor),
                     ],
                   ),
 
@@ -271,6 +299,75 @@ Widget _buildFlavorSelector(Flavor currentFlavor) {
     if (flavor == catppuccin.frappe) return 'Frappé';
     if (flavor == catppuccin.macchiato) return 'Macchiato';
     return 'Mocha';
+  }
+
+  void _navigateToEqualizer(
+    BuildContext context,
+    WidgetRef ref,
+    Flavor flavor,
+  ) {
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (context) => const EqualizerScreen()));
+  }
+
+  Widget _buildCrossfadeTile(WidgetRef ref, Flavor flavor) {
+    final crossfadeState = ref.watch(crossfadeProvider);
+
+    return _buildSettingsTile(
+      title: 'Crossfade',
+      subtitle: crossfadeState.isEnabled
+          ? '${crossfadeState.durationMs}ms'
+          : 'Desactivado',
+      flavor: flavor,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (crossfadeState.isEnabled)
+            SizedBox(
+              width: 100,
+              child: Slider(
+                value: crossfadeState.durationMs.toDouble(),
+                min: 500,
+                max: 8000,
+                divisions: 15,
+                activeColor: flavor.mauve,
+                onChanged: (value) {
+                  ref
+                      .read(crossfadeProvider.notifier)
+                      .setDuration(value.toInt());
+                },
+              ),
+            ),
+          Switch(
+            value: crossfadeState.isEnabled,
+            activeThumbColor: flavor.mauve,
+            onChanged: (value) {
+              ref.read(crossfadeProvider.notifier).setEnabled(value);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGaplessTile(WidgetRef ref, Flavor flavor) {
+    final gaplessState = ref.watch(gaplessProvider);
+
+    return _buildSettingsTile(
+      title: 'Gapless Playback',
+      subtitle: gaplessState.isEnabled
+          ? 'Reproducción continua'
+          : 'Desactivado',
+      flavor: flavor,
+      trailing: Switch(
+        value: gaplessState.isEnabled,
+        activeThumbColor: flavor.mauve,
+        onChanged: (value) {
+          ref.read(gaplessProvider.notifier).setEnabled(value);
+        },
+      ),
+    );
   }
 
   void _showBlacklistDialog(
