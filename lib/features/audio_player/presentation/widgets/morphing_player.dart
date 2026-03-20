@@ -12,6 +12,8 @@ import 'package:icon_button_m3e/icon_button_m3e.dart';
 import '../../../../shared/widgets/album_art_widget.dart';
 import '../../../../shared/widgets/album_theme_wrapper.dart';
 import '../../../library/data/providers/album_art_provider.dart';
+import '../../../lyrics/presentation/providers/lyrics_provider.dart';
+import '../../../lyrics/presentation/widgets/lyrics_viewer.dart';
 import '../../../settings/presentation/providers/flavor_provider.dart';
 import '../providers/album_accent_provider.dart';
 import '../providers/audio_player_provider.dart';
@@ -405,8 +407,10 @@ class _MorphingPlayerState extends ConsumerState<MorphingPlayer>
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBodyBehindAppBar: true,
-      body: Column(
+      body: Stack(
         children: [
+          Column(
+            children: [
           // Drag handle (fades out when expanded)
           Opacity(
             opacity: (1.0 - value).clamp(0.0, 1.0),
@@ -512,6 +516,9 @@ class _MorphingPlayerState extends ConsumerState<MorphingPlayer>
                 ),
               ),
             ),
+          ),
+              const LyricsViewer(),
+            ],
           ),
         ],
       ),
@@ -664,9 +671,14 @@ class _MorphingPlayerState extends ConsumerState<MorphingPlayer>
                   label: Icon(
                     Icons.lyrics_rounded,
                     size: 22,
-                    color: flavor.subtext1,
+                    color: ref.watch(lyricsProvider).isVisible
+                        ? accentColor
+                        : flavor.subtext1,
                   ),
-                  onPressed: () {},
+                  selected: ref.watch(lyricsProvider).isVisible,
+                  onPressed: () {
+                    ref.read(lyricsProvider.notifier).toggleVisibility();
+                  },
                 ),
               ],
             ),

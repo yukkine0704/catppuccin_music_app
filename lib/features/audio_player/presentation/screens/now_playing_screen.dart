@@ -8,6 +8,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:icon_button_m3e/icon_button_m3e.dart';
 
 import '../../../../shared/widgets/album_art_widget.dart';
+import '../../../lyrics/presentation/providers/lyrics_provider.dart';
+import '../../../lyrics/presentation/widgets/lyrics_viewer.dart';
 import '../../../settings/presentation/providers/flavor_provider.dart';
 import '../../../tag_editor/presentation/screens/tag_editor_screen.dart';
 import '../providers/album_accent_provider.dart';
@@ -40,10 +42,15 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen> {
 
     return Scaffold(
       backgroundColor: flavor.base,
-      body: SafeArea(
-        child: widget.isInSheet
-            ? _buildDraggableContent(flavor, playerState)
-            : _buildStandardContent(flavor, playerState),
+      body: Stack(
+        children: [
+          SafeArea(
+            child: widget.isInSheet
+                ? _buildDraggableContent(flavor, playerState)
+                : _buildStandardContent(flavor, playerState),
+          ),
+          const LyricsViewer(),
+        ],
       ),
     );
   }
@@ -380,9 +387,14 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen> {
               label: Icon(
                 Icons.lyrics_rounded,
                 size: 22,
-                color: flavor.subtext1,
+                color: ref.watch(lyricsProvider).isVisible
+                    ? accentColor
+                    : flavor.subtext1,
               ),
-              onPressed: () {},
+              selected: ref.watch(lyricsProvider).isVisible,
+              onPressed: () {
+                ref.read(lyricsProvider.notifier).toggleVisibility();
+              },
             ),
           ],
         ),
