@@ -74,6 +74,56 @@ class LyricsViewer extends ConsumerWidget {
                   tooltip: 'Cerrar',
                 ),
                 actions: [
+                  // Save/Delete lyrics button
+                  if (lyricsState.hasLyrics)
+                    IconButtonM3E(
+                      variant: IconButtonM3EVariant.tonal,
+                      icon: Icon(
+                        lyricsState.isSaved
+                            ? Icons.bookmark_rounded
+                            : Icons.bookmark_border_rounded,
+                        color: lyricsState.isSaved ? flavor.green : flavor.text,
+                      ),
+                      onPressed: () async {
+                        if (lyricsState.isSaved) {
+                          // Delete saved lyrics
+                          final deleted = await ref
+                              .read(lyricsProvider.notifier)
+                              .deleteSavedLyrics();
+                          if (deleted && context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text('Letras eliminadas'),
+                                backgroundColor: flavor.surface1,
+                              ),
+                            );
+                          }
+                        } else {
+                          // Save lyrics to file
+                          final saved = await ref
+                              .read(lyricsProvider.notifier)
+                              .saveLyricsToFile();
+                          if (saved && context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text('Letras guardadas'),
+                                backgroundColor: flavor.surface1,
+                              ),
+                            );
+                          } else if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text('Error al guardar letras'),
+                                backgroundColor: flavor.surface1,
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      tooltip: lyricsState.isSaved
+                          ? 'Eliminar archivo de letras'
+                          : 'Guardar letras en archivo',
+                    ),
                   if (lyricsState.canSearchOnline)
                     IconButtonM3E(
                       variant: IconButtonM3EVariant.tonal,

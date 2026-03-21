@@ -29,6 +29,12 @@ class LyricsState {
   /// Source of the lyrics (local or online).
   final LyricsSource source;
 
+  /// Whether lyrics have been saved to a file.
+  final bool isSaved;
+
+  /// Path where lyrics were saved (if saved).
+  final String? savedPath;
+
   const LyricsState({
     this.lyrics = const [],
     this.currentLineIndex = -1,
@@ -37,6 +43,8 @@ class LyricsState {
     this.isSearchingOnline = false,
     this.onlineSearchAttempted = false,
     this.source = LyricsSource.none,
+    this.isSaved = false,
+    this.savedPath = null,
   });
 
   LyricsState copyWith({
@@ -47,6 +55,8 @@ class LyricsState {
     bool? isSearchingOnline,
     bool? onlineSearchAttempted,
     LyricsSource? source,
+    bool? isSaved,
+    String? savedPath,
   }) {
     return LyricsState(
       lyrics: lyrics ?? this.lyrics,
@@ -57,6 +67,8 @@ class LyricsState {
       onlineSearchAttempted:
           onlineSearchAttempted ?? this.onlineSearchAttempted,
       source: source ?? this.source,
+      isSaved: isSaved ?? this.isSaved,
+      savedPath: savedPath,
     );
   }
 
@@ -124,6 +136,9 @@ class LyricsNotifier extends StateNotifier<LyricsState> {
       onlineSearchAttempted: false,
       source: LyricsSource.none,
     );
+
+    // Check if there's already a saved lyrics file
+    await checkIfLyricsSaved();
 
     // Try to load local lyrics first
     try {
@@ -319,6 +334,78 @@ class LyricsNotifier extends StateNotifier<LyricsState> {
 
     // Seek the audio player to this position
     _ref.read(audioPlayerProvider.notifier).seek(timestamp);
+  }
+
+  /// Saves the current lyrics to an external .lrc file.
+  /// Returns true if saved successfully, false otherwise.
+  Future<bool> saveLyricsToFile() async {
+    final playerState = _ref.read(audioPlayerProvider);
+    final track = playerState.currentTrack;
+
+    if (track == null || state.lyrics.isEmpty) {
+      return false;
+    }
+
+    try {
+      final savedPath = await _dataSource.saveLyricsToFile(
+        track.filePath,
+        state.lyrics,
+        artist: track.artist,
+        title: track.title,
+        album: track.album,
+      );
+
+      if (savedPath != null) {
+        state = state.copyWith(isSaved: true, savedPath: savedPath);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('[LyricsNotifier] Error saving lyrics: $e');
+      return false;
+    }
+  }
+
+  /// Deletes the saved .lrc file for the current track.
+  /// Returns true if deleted successfully, false otherwise.
+  Future<bool> deleteSavedLyrics() async {
+    final playerState = _ref.read(audioPlayerProvider);
+    final track = playerState.currentTrack;
+
+    if (track == null) {
+      return false;
+    }
+
+    try {
+      final deleted = await _dataSource.deleteLyricsFile(track.filePath);
+
+      if (deleted) {
+        state = state.copyWith(isSaved: false, savedPath: null);
+      }
+      return deleted;
+    } catch (e) {
+      debugPrint('[LyricsNotifier] Error deleting lyrics: $e');
+      return false;
+    }
+  }
+
+  /// Checks if lyrics file exists for current track.
+  Future<bool> checkIfLyricsSaved() async {
+    final playerState = _ref.read(audioPlayerProvider);
+    final track = playerState.currentTrack;
+
+    if (track == null) {
+      return false;
+    }
+
+    final hasFile = await _dataSource.hasLyricsFile(track.filePath);
+    final extensionRegex = RegExp(r'\.[^.]+$');
+    final savedPath = hasFile
+        ? track.filePath.replaceAll(extensionRegex, '_lyrics.lrc')
+        : null;
+
+    state = state.copyWith(isSaved: hasFile, savedPath: savedPath);
+    return hasFile;
   }
 }
 

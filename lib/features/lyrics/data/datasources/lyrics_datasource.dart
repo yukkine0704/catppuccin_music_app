@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
+
 import '../../../../core/utils/lrc_parser.dart';
 import '../../domain/entities/lyric_line.dart';
 
@@ -14,6 +16,9 @@ import '../../domain/entities/lyric_line.dart';
 class LyricsDataSource {
   /// LRCLIB API base URL
   static const String _lrclibBaseUrl = 'https://lrclib.net/api';
+
+  /// Regex pattern to match file extension
+  static final RegExp _extensionRegex = RegExp(r'\.[^.]+$');
 
   /// Loads lyrics for a given audio file path.
   ///
@@ -32,9 +37,9 @@ class LyricsDataSource {
       // List of possible lyrics file paths to try
       final lrcPaths = [
         // Same directory as audio file
-        File(audioFile.path.replaceAll(RegExp(r'\.[^.]+$'), '.lrc')),
+        File(audioFile.path.replaceAll(_extensionRegex, '.lrc')),
         // With _lyrics suffix
-        File(audioFile.path.replaceAll(RegExp(r'\.[^.]+$'), '_lyrics.lrc')),
+        File(audioFile.path.replaceAll(_extensionRegex, '_lyrics.lrc')),
         // In lyrics subdirectory
         File('${audioDir.path}/lyrics/$baseName.lrc'),
         // lyrics subdirectory with _lyrics suffix
@@ -236,5 +241,142 @@ class LyricsDataSource {
       return fileName.substring(0, dotIndex);
     }
     return fileName;
+  }
+
+  /// Saves lyrics to an external .lrc file in the same directory as the audio.
+  ///
+  /// Returns the path where the file was saved, or null if failed.
+  Future<String?> saveLyricsToFile(
+    String audioFilePath,
+    List<LyricLine> lyrics, {
+    String? artist,
+    String? title,
+    String? album,
+  }) async {
+    try {
+      final audioFile = File(audioFilePath);
+      if (!await audioFile.exists()) {
+        return null;
+      }
+
+      final lrcContent = _generateLrcContent(
+        lyrics,
+        artist: artist,
+        title: title,
+        album: album,
+      );
+
+      // Save in same directory with _lyrics suffix to avoid overwriting
+      final lrcPath = audioFile.path.replaceAll(_extensionRegex, '_lyrics.lrc');
+
+      final lrcFile = File(lrcPath);
+      await lrcFile.writeAsString(lrcContent);
+
+      debugPrint('[LyricsDataSource] Saved lyrics to: $lrcPath');
+      return lrcPath;
+    } catch (e) {
+      debugPrint('[LyricsDataSource] Error saving lyrics to file: $e');
+      return null;
+    }
+  }
+
+  /// Generates LRC file content from lyric lines with metadata.
+  String _generateLrcContent(
+    List<LyricLine> lyrics, {
+    String? artist,
+    String? title,
+    String? album,
+  }) {
+    final buffer = StringBuffer();
+
+    // Add metadata tags
+    if (title != null && title.isNotEmpty) {
+      buffer.writeln('[ti:$title]');
+    }
+    if (artist != null && artist.isNotEmpty) {
+      buffer.writeln('[ar:$artist]');
+    }
+    if (album != null && album.isNotEmpty) {
+      buffer.writeln('[al:$album]');
+    }
+
+    // Add empty line between metadata and lyrics
+    buffer.writeln();
+
+    // Add synchronized lyrics
+    for (final line in lyrics) {
+      final timestamp = _formatTimestamp(line.timestamp);
+      buffer.writeln('[$timestamp]${line.text}');
+    }
+
+    return buffer.toString();
+  }
+
+  /// Formats duration to LRC timestamp format [mm:ss.xx].
+  String _formatTimestamp(Duration duration) {
+    final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
+    final centiseconds = (duration.inMilliseconds.remainder(1000) ~/ 10)
+        .toString()
+        .padLeft(2, '0');
+    return '$minutes:$seconds.$centiseconds';
+  }
+
+  /// Deletes a saved .lrc file for the given audio file path.
+  ///
+  /// Returns true if deleted successfully, false otherwise.
+  Future<bool> deleteLyricsFile(String audioFilePath) async {
+    try {
+      final audioFile = File(audioFilePath);
+      if (!await audioFile.exists()) {
+        return false;
+      }
+
+      // Try both possible filenames
+      final lrcPath1 = audioFile.path.replaceAll(_extensionRegex, '.lrc');
+      final lrcPath2 = audioFile.path.replaceAll(
+        _extensionRegex,
+        '_lyrics.lrc',
+      );
+
+      final file1 = File(lrcPath1);
+      final file2 = File(lrcPath2);
+
+      bool deleted = false;
+      if (await file1.exists()) {
+        await file1.delete();
+        deleted = true;
+      }
+      if (await file2.exists()) {
+        await file2.delete();
+        deleted = true;
+      }
+
+      return deleted;
+    } catch (e) {
+      debugPrint('[LyricsDataSource] Error deleting lyrics file: $e');
+      return false;
+    }
+  }
+
+  /// Checks if a lyrics file exists for the given audio file path.
+  Future<bool> hasLyricsFile(String audioFilePath) async {
+    try {
+      final audioFile = File(audioFilePath);
+      if (!await audioFile.exists()) {
+        return false;
+      }
+
+      // Check both possible filenames
+      final lrcPath1 = audioFile.path.replaceAll(_extensionRegex, '.lrc');
+      final lrcPath2 = audioFile.path.replaceAll(
+        _extensionRegex,
+        '_lyrics.lrc',
+      );
+
+      return await File(lrcPath1).exists() || await File(lrcPath2).exists();
+    } catch (e) {
+      return false;
+    }
   }
 }
