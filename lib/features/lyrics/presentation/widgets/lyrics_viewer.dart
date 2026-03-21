@@ -1,4 +1,5 @@
 import 'package:app_bar_m3e/app_bar_m3e.dart';
+import 'package:button_group_m3e/button_group_m3e.dart';
 import 'package:button_m3e/button_m3e.dart';
 import 'package:catppuccin_flutter/catppuccin_flutter.dart';
 import 'package:flutter/material.dart';
@@ -74,55 +75,90 @@ class LyricsViewer extends ConsumerWidget {
                   tooltip: 'Cerrar',
                 ),
                 actions: [
-                  // Save/Delete lyrics button
+                  // Save/Delete lyrics button group
                   if (lyricsState.hasLyrics)
-                    IconButtonM3E(
-                      variant: IconButtonM3EVariant.tonal,
-                      icon: Icon(
-                        lyricsState.isSaved
-                            ? Icons.bookmark_rounded
-                            : Icons.bookmark_border_rounded,
-                        color: lyricsState.isSaved ? flavor.green : flavor.text,
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ButtonGroupM3E(
+                        type: ButtonGroupM3EType.connected,
+                        shape: ButtonGroupM3EShape.round,
+                        size: ButtonGroupM3ESize.sm,
+                        selection: true,
+                        style: ButtonM3EStyle.tonal,
+                        actions: [
+                          ButtonGroupM3EAction(
+                            label: Icon(
+                              Icons.save_alt_rounded,
+                              size: 20,
+                              color: !lyricsState.isSaved
+                                  ? flavor.mauve
+                                  : flavor.subtext1,
+                            ),
+                            selected: !lyricsState.isSaved,
+                            onPressed: lyricsState.isSaved
+                                ? null
+                                : () async {
+                                    // Save lyrics to file
+                                    final saved = await ref
+                                        .read(lyricsProvider.notifier)
+                                        .saveLyricsToFile();
+                                    if (saved && context.mounted) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: const Text(
+                                            'Letras guardadas',
+                                          ),
+                                          backgroundColor: flavor.surface1,
+                                        ),
+                                      );
+                                    } else if (context.mounted) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: const Text(
+                                            'Error al guardar letras',
+                                          ),
+                                          backgroundColor: flavor.surface1,
+                                        ),
+                                      );
+                                    }
+                                  },
+                          ),
+                          ButtonGroupM3EAction(
+                            label: Icon(
+                              Icons.delete_outline_rounded,
+                              size: 20,
+                              color: lyricsState.isSaved
+                                  ? flavor.red
+                                  : flavor.subtext1,
+                            ),
+                            selected: lyricsState.isSaved,
+                            onPressed: lyricsState.isSaved
+                                ? () async {
+                                    // Delete saved lyrics
+                                    final deleted = await ref
+                                        .read(lyricsProvider.notifier)
+                                        .deleteSavedLyrics();
+                                    if (deleted && context.mounted) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: const Text(
+                                            'Letras eliminadas',
+                                          ),
+                                          backgroundColor: flavor.surface1,
+                                        ),
+                                      );
+                                    }
+                                  }
+                                : null,
+                          ),
+                        ],
                       ),
-                      onPressed: () async {
-                        if (lyricsState.isSaved) {
-                          // Delete saved lyrics
-                          final deleted = await ref
-                              .read(lyricsProvider.notifier)
-                              .deleteSavedLyrics();
-                          if (deleted && context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: const Text('Letras eliminadas'),
-                                backgroundColor: flavor.surface1,
-                              ),
-                            );
-                          }
-                        } else {
-                          // Save lyrics to file
-                          final saved = await ref
-                              .read(lyricsProvider.notifier)
-                              .saveLyricsToFile();
-                          if (saved && context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: const Text('Letras guardadas'),
-                                backgroundColor: flavor.surface1,
-                              ),
-                            );
-                          } else if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: const Text('Error al guardar letras'),
-                                backgroundColor: flavor.surface1,
-                              ),
-                            );
-                          }
-                        }
-                      },
-                      tooltip: lyricsState.isSaved
-                          ? 'Eliminar archivo de letras'
-                          : 'Guardar letras en archivo',
                     ),
                   if (lyricsState.canSearchOnline)
                     IconButtonM3E(
