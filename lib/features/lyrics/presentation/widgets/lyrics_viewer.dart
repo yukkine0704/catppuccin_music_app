@@ -22,7 +22,7 @@ import '../providers/lyrics_provider.dart';
 /// - Search online lyrics when no local lyrics found
 /// - M3E compliant design with Catppuccin theme
 /// - Accessibility support with Semantics
-class LyricsViewer extends ConsumerWidget {
+class LyricsViewer extends ConsumerStatefulWidget {
   const LyricsViewer({super.key});
 
   /// Shows the lyrics bottom sheet.
@@ -36,7 +36,33 @@ class LyricsViewer extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<LyricsViewer> createState() => _LyricsViewerState();
+}
+
+class _LyricsViewerState extends ConsumerState<LyricsViewer> {
+  late TextEditingController _artistController;
+  late TextEditingController _titleController;
+  bool _controllersInitialized = false;
+
+  @override
+  void dispose() {
+    if (_controllersInitialized) {
+      _artistController.dispose();
+      _titleController.dispose();
+    }
+    super.dispose();
+  }
+
+  void _initializeControllers(String defaultArtist, String defaultTitle) {
+    if (!_controllersInitialized) {
+      _artistController = TextEditingController(text: defaultArtist);
+      _titleController = TextEditingController(text: defaultTitle);
+      _controllersInitialized = true;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final flavor = ref.watch(flavorProvider);
     final lyricsState = ref.watch(lyricsProvider);
 
@@ -230,9 +256,8 @@ class LyricsViewer extends ConsumerWidget {
     final defaultArtist = currentTrack?.artist ?? '';
     final defaultTitle = currentTrack?.title ?? '';
 
-    // Controllers for custom search fields
-    final artistController = TextEditingController(text: defaultArtist);
-    final titleController = TextEditingController(text: defaultTitle);
+    // Initialize controllers with default values (only once)
+    _initializeControllers(defaultArtist, defaultTitle);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -260,7 +285,8 @@ class LyricsViewer extends ConsumerWidget {
           const SizedBox(height: 24),
           // Custom search fields
           TextField(
-            controller: artistController,
+            controller: _artistController,
+            autofocus: true,
             decoration: InputDecoration(
               labelText: 'Artista',
               hintText: 'Nombre del artista',
@@ -275,7 +301,7 @@ class LyricsViewer extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
           TextField(
-            controller: titleController,
+            controller: _titleController,
             decoration: InputDecoration(
               labelText: 'Título',
               hintText: 'Título de la canción',
@@ -303,8 +329,8 @@ class LyricsViewer extends ConsumerWidget {
                       ref
                           .read(lyricsProvider.notifier)
                           .searchOnlineLyrics(
-                            customArtist: artistController.text.trim(),
-                            customTitle: titleController.text.trim(),
+                            customArtist: _artistController.text.trim(),
+                            customTitle: _titleController.text.trim(),
                           );
                     },
               label: Text(
@@ -332,7 +358,7 @@ class LyricsViewer extends ConsumerWidget {
                 onPressed: () {
                   // Use custom search terms for Google
                   final query =
-                      '${artistController.text} ${titleController.text} lyrics';
+                      '${_artistController.text} ${_titleController.text} lyrics';
                   _searchLyricsOnGoogleWithQuery(ref, query);
                 },
                 label: const Text('Buscar en Google'),
