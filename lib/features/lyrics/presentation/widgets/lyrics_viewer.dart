@@ -2,6 +2,7 @@ import 'package:app_bar_m3e/app_bar_m3e.dart';
 import 'package:button_group_m3e/button_group_m3e.dart';
 import 'package:button_m3e/button_m3e.dart';
 import 'package:catppuccin_flutter/catppuccin_flutter.dart';
+import 'package:catppuccin_music_app/shared/widgets/snackbar_m3e.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:icon_button_m3e/icon_button_m3e.dart';
@@ -103,26 +104,16 @@ class LyricsViewer extends ConsumerWidget {
                                         .read(lyricsProvider.notifier)
                                         .saveLyricsToFile();
                                     if (saved && context.mounted) {
-                                      ScaffoldMessenger.of(
+                                      SnackBarM3E.showSuccess(
                                         context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: const Text(
-                                            'Letras guardadas',
-                                          ),
-                                          backgroundColor: flavor.surface1,
-                                        ),
+                                        ref,
+                                        message: 'Letras guardadas',
                                       );
                                     } else if (context.mounted) {
-                                      ScaffoldMessenger.of(
+                                      SnackBarM3E.showError(
                                         context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: const Text(
-                                            'Error al guardar letras',
-                                          ),
-                                          backgroundColor: flavor.surface1,
-                                        ),
+                                        ref,
+                                        message: 'Error al guardar letras',
                                       );
                                     }
                                   },
@@ -143,15 +134,10 @@ class LyricsViewer extends ConsumerWidget {
                                         .read(lyricsProvider.notifier)
                                         .deleteSavedLyrics();
                                     if (deleted && context.mounted) {
-                                      ScaffoldMessenger.of(
+                                      SnackBarM3E.showSuccess(
                                         context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: const Text(
-                                            'Letras eliminadas',
-                                          ),
-                                          backgroundColor: flavor.surface1,
-                                        ),
+                                        ref,
+                                        message: 'Letras eliminadas',
                                       );
                                     }
                                   }
@@ -169,12 +155,6 @@ class LyricsViewer extends ConsumerWidget {
                       },
                       tooltip: 'Buscar letras en línea',
                     ),
-                  IconButtonM3E(
-                    variant: IconButtonM3EVariant.tonal,
-                    icon: Icon(Icons.close_rounded, color: flavor.text),
-                    onPressed: () => Navigator.of(context).pop(),
-                    tooltip: 'Cerrar',
-                  ),
                 ],
                 shapeFamily: AppBarM3EShapeFamily.round,
                 density: AppBarM3EDensity.regular,
