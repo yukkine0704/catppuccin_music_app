@@ -49,6 +49,12 @@ class TracksTable extends Table {
   /// Ruta de la carpeta donde está ubicada la pista
   TextColumn get folderPath => text().nullable()();
 
+  /// Letras de la canción (formato LRC sincronizado)
+  TextColumn get lyrics => text().nullable()();
+
+  /// Fuente de las letras (local, online, etc.)
+  TextColumn get lyricsSource => text().nullable()();
+
   /// Contador de reproducciones de la pista
   IntColumn get playCount => integer().withDefault(const Constant(0))();
 }

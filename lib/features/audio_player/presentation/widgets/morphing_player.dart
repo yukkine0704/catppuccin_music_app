@@ -407,10 +407,8 @@ class _MorphingPlayerState extends ConsumerState<MorphingPlayer>
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBodyBehindAppBar: true,
-      body: Stack(
+      body: Column(
         children: [
-          Column(
-            children: [
           // Drag handle (fades out when expanded)
           Opacity(
             opacity: (1.0 - value).clamp(0.0, 1.0),
@@ -469,7 +467,7 @@ class _MorphingPlayerState extends ConsumerState<MorphingPlayer>
           ),
 
           // Main content
-          Flexible(
+          Expanded(
             child: SingleChildScrollView(
               physics: const NeverScrollableScrollPhysics(),
               child: Padding(
@@ -516,9 +514,6 @@ class _MorphingPlayerState extends ConsumerState<MorphingPlayer>
                 ),
               ),
             ),
-          ),
-              const LyricsViewer(),
-            ],
           ),
         ],
       ),
@@ -671,13 +666,13 @@ class _MorphingPlayerState extends ConsumerState<MorphingPlayer>
                   label: Icon(
                     Icons.lyrics_rounded,
                     size: 22,
-                    color: ref.watch(lyricsProvider).isVisible
+                    color: ref.watch(lyricsProvider).hasLyrics
                         ? accentColor
                         : flavor.subtext1,
                   ),
-                  selected: ref.watch(lyricsProvider).isVisible,
+                  selected: ref.watch(lyricsProvider).hasLyrics,
                   onPressed: () {
-                    ref.read(lyricsProvider.notifier).toggleVisibility();
+                    LyricsViewer.show(context);
                   },
                 ),
               ],
